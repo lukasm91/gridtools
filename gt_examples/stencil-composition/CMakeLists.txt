@@ -1,5 +1,5 @@
 if( NOT GT_TESTS_ICOSAHEDRAL_GRID )
-    set( EXAMPLES_SRCFILES copy_stencil horizontal_diffusion_limited tridiagonal_solver)
+    set( EXAMPLES_SRCFILES copy_stencil horizontal_diffusion_limited tridiagonal_solver issue)
 
     if(GT_ENABLE_TARGET_MC)
         foreach(srcfile IN LISTS EXAMPLES_SRCFILES)
@@ -16,4 +16,15 @@ if( NOT GT_TESTS_ICOSAHEDRAL_GRID )
             install_example(${srcfile}_cuda_ex)
         endforeach()
     endif(GT_ENABLE_TARGET_CUDA)
+
+    if(GT_ENABLE_TARGET_X86)
+        add_executable( issue_x86_naive issue.cpp )
+        target_link_libraries(issue_x86_naive GridToolsTestX86 )
+        target_compile_definitions(issue_x86_naive PUBLIC STRATEGY_NAIVE)
+        install_example(issue_x86_naive)
+
+        add_executable( issue_x86_block issue.cpp )
+        target_link_libraries(issue_x86_block GridToolsTestX86 )
+        install_example(issue_x86_block)
+    endif()
 endif()
