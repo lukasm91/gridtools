@@ -1,3 +1,6 @@
+// #include <gt_dump/generator.hpp>
+#include <gt_dump/use_generated.hpp>
+
 /*
  * GridTools
  *
@@ -172,8 +175,12 @@ struct vertical_advection_dycore : regression_fixture<3, axis_t> {
     void verify_utens_stage() { verify(make_storage(repo.utens_stage_out), utens_stage); }
 };
 
+GT_DUMP_GENERATED_CODE(test);
+GT_DUMP_GENERATED_CODE(with_extent);
+
 TEST_F(vertical_advection_dycore, test) {
-    auto comp = make_computation(p_utens_stage = utens_stage,
+    auto comp = make_computation(GT_DUMP_IDENTIFIER(test),
+        p_utens_stage = utens_stage,
         p_u_stage = make_storage(repo.u_stage),
         p_wcon = make_storage(repo.wcon),
         p_u_pos = make_storage(repo.u_pos),
@@ -190,13 +197,15 @@ TEST_F(vertical_advection_dycore, test) {
         make_multistage(execute::backward(),
             define_caches(cache<cache_type::k, cache_io_policy::local>(p_data_col)),
             make_stage<u_backward_function>(p_utens_stage, p_u_pos, p_dtr_stage, p_ccol, p_dcol, p_data_col)));
+
     comp.run();
     verify_utens_stage();
     benchmark(comp);
 }
 
 TEST_F(vertical_advection_dycore, with_extents) {
-    make_computation(p_utens_stage = utens_stage,
+    auto comp = make_computation(GT_DUMP_IDENTIFIER(with_extent),
+        p_utens_stage = utens_stage,
         p_u_stage = make_storage(repo.u_stage),
         p_wcon = make_storage(repo.wcon),
         p_u_pos = make_storage(repo.u_pos),
@@ -213,7 +222,8 @@ TEST_F(vertical_advection_dycore, with_extents) {
         make_multistage(execute::backward(),
             define_caches(cache<cache_type::k, cache_io_policy::local>(p_data_col)),
             make_stage_with_extent<u_backward_function, extent<>>(
-                p_utens_stage, p_u_pos, p_dtr_stage, p_ccol, p_dcol, p_data_col)))
-        .run();
+                p_utens_stage, p_u_pos, p_dtr_stage, p_ccol, p_dcol, p_data_col)));
+
+    comp.run();
     verify_utens_stage();
 }

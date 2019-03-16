@@ -1,3 +1,129 @@
+set(GT_DUMP_DATA_FOLDER "/home/lukas/documents/work/gridtools4/build/regression/data")
+set(GT_DUMP_GENERATE_DATA OFF)
+
+function (gt_copy_target new_target old_target)
+    set(CMAKE_PROPERTY_LIST
+        BINARY_DIR
+        C_EXTENSIONS
+        C_STANDARD
+        C_STANDARD_REQUIRED
+        COMPILE_DEFINITIONS
+        COMPILE_FEATURES
+        COMPILE_FLAGS
+        COMPILE_OPTIONS
+        CUDA_SEPARABLE_COMPILATION
+        CUDA_RESOLVE_DEVICE_SYMBOLS
+        CUDA_EXTENSIONS
+        CUDA_STANDARD
+        CUDA_STANDARD_REQUIRED
+        CXX_EXTENSIONS
+        CXX_STANDARD
+        CXX_STANDARD_REQUIRED
+        DEFINE_SYMBOL
+        ENABLE_EXPORTS
+        EXCLUDE_FROM_ALL
+        HAS_CXX
+        INCLUDE_DIRECTORIES
+        INSTALL_NAME_DIR
+        INSTALL_RPATH
+        INSTALL_RPATH_USE_LINK_PATH
+        INTERFACE_AUTOUIC_OPTIONS
+        INTERFACE_COMPILE_DEFINITIONS
+        INTERFACE_COMPILE_FEATURES
+        INTERFACE_COMPILE_OPTIONS
+        INTERFACE_INCLUDE_DIRECTORIES
+        INTERFACE_LINK_DEPENDS
+        INTERFACE_LINK_DIRECTORIES
+        INTERFACE_LINK_LIBRARIES
+        INTERFACE_LINK_OPTIONS
+        INTERFACE_POSITION_INDEPENDENT_CODE
+        INTERFACE_SOURCES
+        INTERFACE_SYSTEM_INCLUDE_DIRECTORIES
+        LABELS
+        LINK_DEPENDS_NO_SHARED
+        LINK_DEPENDS
+        LINKER_LANGUAGE
+        LINK_DIRECTORIES
+        LINK_FLAGS
+        LINK_INTERFACE_LIBRARIES
+        LINK_INTERFACE_MULTIPLICITY
+        LINK_LIBRARIES
+        LINK_OPTIONS
+        LINK_SEARCH_END_STATIC
+        LINK_SEARCH_START_STATIC
+        LINK_WHAT_YOU_USE
+        POSITION_INDEPENDENT_CODE
+        RULE_LAUNCH_COMPILE
+        RULE_LAUNCH_CUSTOM
+        RULE_LAUNCH_LINK
+        SOURCE_DIR
+        )
+
+    # duplicate target
+    get_target_property(target_sources ${old_target} SOURCES)
+    add_library(${new_target} OBJECT ${target_sources} )
+
+    foreach(prop ${CMAKE_PROPERTY_LIST})
+        get_target_property(target_prop ${old_target} ${prop})
+        if (NOT "${target_prop}" MATCHES "-NOTFOUND$")
+            set_target_properties(${new_target} PROPERTIES ${prop} "${target_prop}")
+        endif ()
+    endforeach()
+    # target_compile_options(${new_target}_COMPILED PRIVATE "-xc++-cpp-output")
+endfunction()
+
+function(gt_use_dumped_data target)
+    target_compile_definitions(${target}  PRIVATE GT_DUMP_DATA_FOLDER="${GT_DUMP_DATA_FOLDER}")
+    target_include_directories(${target}  PUBLIC ../gt_dump)
+    target_link_libraries(${target} stdc++fs)
+
+    if (GT_DUMP_GENERATE_DATA)
+        target_compile_definitions(${target} PRIVATE GT_DUMP_GENERATE_DATA)
+    else()
+        get_target_property(target_sources ${target} SOURCES)
+        set(new_sources)
+        foreach(source ${target_sources})
+            get_filename_component(source_path ${source} ABSOLUTE)
+            get_filename_component(source_name_we ${source} NAME_WE)
+            get_filename_component(source_name ${source} NAME)
+            get_filename_component(source_name_ext ${source_path} EXT)
+            get_filename_component(source_dir ${source_path} DIRECTORY)
+
+            set(source_copy ${CMAKE_CURRENT_BINARY_DIR}${CMAKE_FILES_DIRECTORY}/gt_gen/${target}/${source_name})
+            add_custom_command(OUTPUT ${source_copy}
+                COMMAND ${CMAKE_COMMAND} -E make_directory ${CMAKE_CURRENT_BINARY_DIR}${CMAKE_FILES_DIRECTORY}/gt_gen
+                COMMAND ${CMAKE_COMMAND} -E make_directory ${CMAKE_CURRENT_BINARY_DIR}${CMAKE_FILES_DIRECTORY}/gt_gen/${target}
+                COMMAND ${CMAKE_COMMAND} -E copy ${source_path} ${source_copy}
+                DEPENDS ${source_path}
+                COMMENT "Copy original code"
+                )
+
+            gt_copy_target(${target}_${source_name_we}_PREPROCESSED ${target})
+            set_target_properties(${target}_${source_name_we}_PREPROCESSED PROPERTIES SOURCES "${source_copy}")
+            target_compile_options(${target}_${source_name_we}_PREPROCESSED PRIVATE "-E")
+            target_include_directories(${target}_${source_name_we}_PREPROCESSED PRIVATE ${source_dir})
+
+            set(source_preprocessed ${CMAKE_CURRENT_BINARY_DIR}${CMAKE_FILES_DIRECTORY}/gt_gen/${target}/${source_name_we}_preprocessed${source_name_ext})
+            add_custom_command(OUTPUT ${source_preprocessed}
+                COMMAND ${CMAKE_COMMAND} -E copy $<TARGET_OBJECTS:${target}_${source_name_we}_PREPROCESSED> ${source_preprocessed}
+                COMMAND python ${CMAKE_CURRENT_LIST_DIR}/generate_code.py ${source_preprocessed}
+                DEPENDS ${target}_${source_name_we}_PREPROCESSED $<TARGET_OBJECTS:${target}_${source_name_we}_PREPROCESSED>
+                COMMENT "Transform preprocessed file"
+                )
+
+            gt_copy_target(${target}_${source_name_we}_FINAL ${target})
+            set_target_properties(${target}_${source_name_we}_FINAL PROPERTIES SOURCES "${source_preprocessed}")
+            target_compile_options(${target}_${source_name_we}_FINAL PRIVATE "-xc++-cpp-output")
+            target_include_directories(${target}_${source_name_we}_FINAL PRIVATE ${source_dir})
+
+            target_link_libraries(${target} ${target}_${source_name_we}_FINAL)
+
+        endforeach()
+
+        set_target_properties(${target} PROPERTIES SOURCES "${new_sources}")
+    endif()
+endfunction()
+
 if( COMPONENT_STENCIL_COMPOSITION )
 
     if(GT_TESTS_ICOSAHEDRAL_GRID)
@@ -165,3 +291,11 @@ if( COMPONENT_STENCIL_COMPOSITION )
 
   endif(GT_TESTS_ICOSAHEDRAL_GRID)
 endif( COMPONENT_STENCIL_COMPOSITION )
+
+
+######
+
+gt_use_dumped_data(vertical_advection_dycore_x86_block)
+gt_use_dumped_data(vertical_advection_dycore_cuda)
+gt_use_dumped_data(copy_stencil_x86_block)
+

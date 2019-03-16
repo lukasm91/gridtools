@@ -32,9 +32,14 @@ struct copy_stencil : regression_fixture<0> {
     storage_type out = make_storage(-1.);
 };
 
+GT_DUMP_GENERATED_CODE(test);
+GT_DUMP_GENERATED_CODE(with_extents);
+
 TEST_F(copy_stencil, test) {
-    auto comp =
-        make_computation(p_0 = in, p_1 = out, make_multistage(execute::parallel(), make_stage<copy_functor>(p_0, p_1)));
+    auto comp = make_computation(GT_DUMP_IDENTIFIER(test),
+        p_0 = in,
+        p_1 = out,
+        make_multistage(execute::parallel(), make_stage<copy_functor>(p_0, p_1)));
 
     comp.run();
     verify(in, out);
@@ -42,7 +47,8 @@ TEST_F(copy_stencil, test) {
 }
 
 TEST_F(copy_stencil, with_extents) {
-    make_computation(p_0 = in,
+    make_computation(GT_DUMP_IDENTIFIER(test),
+        p_0 = in,
         p_1 = out,
         make_multistage(execute::parallel(), make_stage_with_extent<copy_functor, extent<>>(p_0, p_1)))
         .run();

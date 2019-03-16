@@ -68,7 +68,14 @@ if( GT_USE_MPI )
     endif()
 endif()
 
+find_package(Protobuf REQUIRED)
+add_library(gtgen_proto /home/lukas/documents/work/test/cpp_interface/interface.pb.cc)
+target_include_directories(gtgen_proto PUBLIC /home/lukas/documents/work/test/cpp_interface/)
+target_link_libraries(gtgen_proto ${Protobuf_LIBRARIES})
+
 add_library(GridToolsTest INTERFACE)
+target_link_libraries(GridToolsTest INTERFACE gtgen_proto)
+
 # NOTE: The CUDA workaround can only be applied to the test because it cannot work
 # with generator expressions. Thus, this needs to be redone in the Config.cmake.in.
 include(workaround_cuda)

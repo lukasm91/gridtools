@@ -81,3 +81,9 @@ namespace gridtools {
         return {};
     }
 } // namespace gridtools
+
+#ifdef GT_DUMP_GENERATE_DATA
+#include <gt_dump/generator.hpp>
+#else
+#include <gt_dump/use_generated.hpp>
+#endif
