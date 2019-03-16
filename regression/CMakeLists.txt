@@ -69,11 +69,10 @@ function (gt_copy_target new_target old_target)
             set_target_properties(${new_target} PROPERTIES ${prop} "${target_prop}")
         endif ()
     endforeach()
-    # target_compile_options(${new_target}_COMPILED PRIVATE "-xc++-cpp-output")
 endfunction()
 
 function(gt_use_dumped_data target)
-    target_compile_definitions(${target}  PRIVATE GT_DUMP_DATA_FOLDER="${GT_DUMP_DATA_FOLDER}")
+    target_compile_definitions(${target}  PRIVATE GT_DUMP_DATA_FOLDER=${GT_DUMP_DATA_FOLDER})
     target_include_directories(${target}  PUBLIC ../gt_dump)
     target_link_libraries(${target} stdc++fs)
 
@@ -89,34 +88,12 @@ function(gt_use_dumped_data target)
             get_filename_component(source_name_ext ${source_path} EXT)
             get_filename_component(source_dir ${source_path} DIRECTORY)
 
-            set(source_copy ${CMAKE_CURRENT_BINARY_DIR}${CMAKE_FILES_DIRECTORY}/gt_gen/${target}/${source_name})
-            add_custom_command(OUTPUT ${source_copy}
-                COMMAND ${CMAKE_COMMAND} -E make_directory ${CMAKE_CURRENT_BINARY_DIR}${CMAKE_FILES_DIRECTORY}/gt_gen
-                COMMAND ${CMAKE_COMMAND} -E make_directory ${CMAKE_CURRENT_BINARY_DIR}${CMAKE_FILES_DIRECTORY}/gt_gen/${target}
-                COMMAND ${CMAKE_COMMAND} -E copy ${source_path} ${source_copy}
-                DEPENDS ${source_path}
-                COMMENT "Copy original code"
-                )
-
-            gt_copy_target(${target}_${source_name_we}_PREPROCESSED ${target})
-            set_target_properties(${target}_${source_name_we}_PREPROCESSED PROPERTIES SOURCES "${source_copy}")
-            target_compile_options(${target}_${source_name_we}_PREPROCESSED PRIVATE "-E")
-            target_include_directories(${target}_${source_name_we}_PREPROCESSED PRIVATE ${source_dir})
-
-            set(source_preprocessed ${CMAKE_CURRENT_BINARY_DIR}${CMAKE_FILES_DIRECTORY}/gt_gen/${target}/${source_name_we}_preprocessed${source_name_ext})
-            add_custom_command(OUTPUT ${source_preprocessed}
-                COMMAND ${CMAKE_COMMAND} -E copy $<TARGET_OBJECTS:${target}_${source_name_we}_PREPROCESSED> ${source_preprocessed}
-                COMMAND python ${CMAKE_CURRENT_LIST_DIR}/generate_code.py ${source_preprocessed}
-                DEPENDS ${target}_${source_name_we}_PREPROCESSED $<TARGET_OBJECTS:${target}_${source_name_we}_PREPROCESSED>
-                COMMENT "Transform preprocessed file"
-                )
-
-            gt_copy_target(${target}_${source_name_we}_FINAL ${target})
-            set_target_properties(${target}_${source_name_we}_FINAL PROPERTIES SOURCES "${source_preprocessed}")
-            target_compile_options(${target}_${source_name_we}_FINAL PRIVATE "-xc++-cpp-output")
-            target_include_directories(${target}_${source_name_we}_FINAL PRIVATE ${source_dir})
-
-            target_link_libraries(${target} ${target}_${source_name_we}_FINAL)
+            gt_copy_target(${target}_${source_name_we} ${target})
+            set_target_properties(${target}_${source_name_we} PROPERTIES SOURCES "${source}")
+            string(REPLACE "/" "_" prefix ${source_path})
+            target_compile_definitions(${target}_${source_name_we} PRIVATE GT_DUMP_PREFIX=${prefix})
+            target_include_directories(${target}_${source_name_we} PRIVATE ${GT_DUMP_DATA_FOLDER}/generated)
+            target_link_libraries(${target} ${target}_${source_name_we})
 
         endforeach()
 
@@ -298,4 +275,5 @@ endif( COMPONENT_STENCIL_COMPOSITION )
 gt_use_dumped_data(vertical_advection_dycore_x86_block)
 gt_use_dumped_data(vertical_advection_dycore_cuda)
 gt_use_dumped_data(copy_stencil_x86_block)
+gt_use_dumped_data(copy_stencil_cuda)
 

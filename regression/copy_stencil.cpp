@@ -32,8 +32,8 @@ struct copy_stencil : regression_fixture<0> {
     storage_type out = make_storage(-1.);
 };
 
-GT_DUMP_GENERATED_CODE(test);
-GT_DUMP_GENERATED_CODE(with_extents);
+#include GT_DUMP_GENERATED_CODE(test)
+#include GT_DUMP_GENERATED_CODE(with_extents)
 
 TEST_F(copy_stencil, test) {
     auto comp = make_computation(GT_DUMP_IDENTIFIER(test),
