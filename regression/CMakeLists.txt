@@ -99,10 +99,10 @@ function(gt_use_dumped_data target)
 
                 add_custom_command(OUTPUT ${generated_file}
                     COMMAND mkdir -p ${GT_DUMP_DATA_FOLDER}/generated/
-                    COMMAND python ${CMAKE_CURRENT_LIST_DIR}/generate_code.py ${generated_file_source_path} ${generated_file}
+                    COMMAND python ${PROJECT_SOURCE_DIR}/gt_dump/generate_code.py ${generated_file_source_path} ${generated_file}
                     COMMENT "Generate ${generated_file}"
                     MAIN_DEPENDENCY ${generated_file_source}
-                    DEPENDS ${CMAKE_CURRENT_LIST_DIR}/generate_code.py
+                    DEPENDS ${PROJECT_SOURCE_DIR}/gt_dump/generate_code.py
                     )
             endforeach()
 
