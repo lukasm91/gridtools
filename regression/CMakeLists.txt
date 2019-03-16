@@ -84,13 +84,29 @@ function(gt_use_dumped_data target)
         foreach(source ${target_sources})
             get_filename_component(source_path ${source} ABSOLUTE)
             get_filename_component(source_name_we ${source} NAME_WE)
-            get_filename_component(source_name ${source} NAME)
-            get_filename_component(source_name_ext ${source_path} EXT)
-            get_filename_component(source_dir ${source_path} DIRECTORY)
+            string(REPLACE "/" "_" prefix ${source_path})
+
+            set(current_sources "${source}")
 
             gt_copy_target(${target}_${source_name_we} ${target})
-            set_target_properties(${target}_${source_name_we} PROPERTIES SOURCES "${source}")
-            string(REPLACE "/" "_" prefix ${source_path})
+
+            file(GLOB generated_files RELATIVE ${CMAKE_CURRENT_LIST_DIR} CONFIGURE_DEPENDS ${GT_DUMP_DATA_FOLDER}/${prefix}*)
+            foreach(generated_file_source ${generated_files})
+                get_filename_component(generated_file_name ${generated_file_source} NAME)
+                get_filename_component(generated_file_source_path ${generated_file_source} ABSOLUTE)
+                set(generated_file ${GT_DUMP_DATA_FOLDER}/generated/${generated_file_name})
+                list(APPEND current_sources ${generated_file})
+
+                add_custom_command(OUTPUT ${generated_file}
+                    COMMAND mkdir -p ${GT_DUMP_DATA_FOLDER}/generated/
+                    COMMAND python ${CMAKE_CURRENT_LIST_DIR}/generate_code.py ${generated_file_source_path} ${generated_file}
+                    COMMENT "Generate ${generated_file}"
+                    MAIN_DEPENDENCY ${generated_file_source}
+                    DEPENDS ${CMAKE_CURRENT_LIST_DIR}/generate_code.py
+                    )
+            endforeach()
+
+            set_target_properties(${target}_${source_name_we} PROPERTIES SOURCES "${current_sources}")
             target_compile_definitions(${target}_${source_name_we} PRIVATE GT_DUMP_PREFIX=${prefix})
             target_include_directories(${target}_${source_name_we} PRIVATE ${GT_DUMP_DATA_FOLDER}/generated)
             target_link_libraries(${target} ${target}_${source_name_we})
@@ -273,7 +289,7 @@ endif( COMPONENT_STENCIL_COMPOSITION )
 ######
 
 gt_use_dumped_data(vertical_advection_dycore_x86_block)
-gt_use_dumped_data(vertical_advection_dycore_cuda)
+#gt_use_dumped_data(vertical_advection_dycore_cuda)
 gt_use_dumped_data(copy_stencil_x86_block)
-gt_use_dumped_data(copy_stencil_cuda)
+#gt_use_dumped_data(copy_stencil_cuda)
 

@@ -47,7 +47,7 @@ TEST_F(copy_stencil, test) {
 }
 
 TEST_F(copy_stencil, with_extents) {
-    make_computation(GT_DUMP_IDENTIFIER(test),
+    make_computation(GT_DUMP_IDENTIFIER(with_extents),
         p_0 = in,
         p_1 = out,
         make_multistage(execute::parallel(), make_stage_with_extent<copy_functor, extent<>>(p_0, p_1)))
