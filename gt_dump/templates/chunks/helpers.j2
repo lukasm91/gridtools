@@ -1,0 +1,46 @@
+{%- macro for_each_used_kind(multistage, kinds, arguments) %}
+    {%- set all_mss_args = multistage.stages|sum(start=[], attribute="arguments") %}
+    {%- for kind_name, kind_info in kinds.items() %}
+        {%- set args_of_kind = dict() %}
+        {%- for arg_name, arg_info in arguments.items() %}
+            {%- if arg_info.kind and arg_info.kind == kind_name and arg_name in all_mss_args|map(attribute="name") %}
+                {%- set readonly = all_mss_args|selectattr("name", "equalto", arg_name)|selectattr("intent", "equalto", "rw")|list|length == 0 %}
+                {%- do args_of_kind.update({arg_name: dict(arg_info, readonly=readonly)}) %}
+            {%- endif %}
+        {%- endfor %}
+        {{- caller(kind_name, kind_info, args_of_kind) if args_of_kind|length > 0 }}
+    {%- endfor %}
+{%- endmacro %}
+{%- macro for_each_ij_cache(multistage, arguments) %}
+    {%- if multistage.ij_caches %}
+        {%- set all_mss_args = multistage.stages|sum(start=[], attribute="arguments") %}
+        {%- for cache_name, cache_info in multistage.ij_caches.items() %}
+            {%- set readonly = all_mss_args|selectattr("name", "equalto", cache_name)|selectattr("intent", "equalto", "rw")|list|length == 0 %}
+            {{- caller(loop.index, cache_name, merge_dict(cache_info, arguments[cache_name], readonly=readonly)) }}
+        {%- endfor %}
+    {%- endif %}
+{%- endmacro %}
+{%- macro for_each_k_cache(multistage, arguments) %}
+    {%- set all_mss_args = multistage.stages|sum(start=[], attribute="arguments") %}
+    {%- if multistage.k_caches %}
+        {%- for cache_name, cache_info in multistage.k_caches.items() %}
+            {%- set readonly = all_mss_args|selectattr("name", "equalto", cache_name)|selectattr("intent", "equalto", "rw")|list|length == 0 %}
+            {{- caller(cache_name, merge_dict(cache_info, arguments[cache_name], readonly=readonly)) }}
+        {%- endfor %}
+    {%- endif %}
+{%- endmacro %}
+{%- macro for_each_non_cached_arg(multistage, kinds, arguments) %}
+    {%- set all_mss_args = multistage.stages|sum(start=[], attribute="arguments") %}
+    {%- set groups = all_mss_args|groupby(attribute="name") %}
+    {%- for arg, arg_info in groups %}
+        {%- if multistage.k_caches and arg in multistage.k_caches %}
+        {%- elif multistage.ij_caches and arg in multistage.ij_caches %}
+        {%- else %}
+            {%- set readonly = arg_info|selectattr("intent", "equalto", "rw")|list|length == 0 %}
+            {{- caller(arg, merge_dict(arguments[arg], kinds[arguments[arg].kind], readonly=readonly)) }}
+        {%- endif %}
+    {%- endfor %}
+    {%- for mss_arg in unique_mss_args %}
+        {{- caller(multistage) }}
+    {%- endfor %}
+{%- endmacro %}

@@ -1,0 +1,315 @@
+{%- for multistage in context.multistages %}
+  class multistage_{{ multistage.id }}_ptrs {
+  {%- if multistage|has_kcaches %}
+    private:
+      {%- if multistage.k_caches|length > 0 %}
+        struct k_caches {
+            {%- for k_cache in multistage.k_caches %}
+              {{ k_cache.type }} arg_{{ 'tmp_' if k_cache.temporary }}{{ k_cache.id }}_[{{ k_cache.max_extent - k_cache.min_extent + 1 }}];
+            {%- endfor %}
+        } k_caches_;
+      {%- endif %}
+
+  {%- endif %}
+    public:
+      {%- if multistage.ij_caches|length > 0 %}
+        struct ij_caches {
+            {%- for ij_cache in multistage.ij_caches %}
+              {{ ij_cache.type }}* arg_{{ 'tmp_' if k_cache.temporary }}{{ ij_cache.id }}_ = nullptr;
+            {%- endfor %}
+            GT_FUNCTION int get_offset(int i, int j, int k) const noexcept {
+                assert(k == 0);
+                return i * i_stride_ + j * j_stride_;
+            }
+            static constexpr int i_stride_ = 1;
+            static constexpr int j_stride_ = gen::block_i_size +
+                                                 -multistage_{{ multistage.id }}_info::max_stage_extent::iminus() +
+                                                 multistage_{{ multistage.id }}_info::max_stage_extent::iplus();
+        } ij_caches_;
+      {%- endif %}
+
+      {%- for kind_id, kind_info in multistage["kinds"].items() %}
+        struct kind_{{ kind_id }}_fields {
+            kind_{{ kind_id }}_fields(kind_{{ kind_id }}_info const& si) noexcept : si_(si) {}
+            kind_{{ kind_id }}_info si_;
+
+            {%- for arg_id, arg_info in kind_info.args.items() %}
+              {{ arg_info.type }}{{ ' const' if arg_info.readonly }}* ptr_{{ arg_id }}_ = nullptr;
+            {%- endfor %}
+
+            void check() const noexcept {
+                {%- for arg_id, arg_info in kind_info.args.items() %}
+                  assert(ptr_{{ arg_id }}_ != nullptr);
+                {%- endfor %}
+            }
+
+            GT_FUNCTION void increment(int const offset) noexcept {
+                {%- for arg_id, arg_info in kind_info.args.items() %}
+                  ptr_{{ arg_id }}_ += offset;
+                {%- endfor %}
+            }
+
+            GT_FUNCTION void increment_i(int const i) noexcept {
+                increment(si_.get_offset(i, 0, 0));
+            }
+            GT_FUNCTION void increment_j(int const j) noexcept {
+                increment(si_.get_offset(0, j, 0));
+            }
+            GT_FUNCTION void increment_k(int const k) noexcept {
+                increment(si_.get_offset(0, 0, k));
+            }
+            GT_FUNCTION void initialize(int const nbx, int const nby, int const i, int const j, int const k) noexcept {
+                increment(si_.get_block_offset(nbx, nby));
+                increment(si_.get_offset(i, j, k));
+            }
+        } kind_{{ kind_id }}_fields_;
+
+      {%- for arg_id, arg_info in multistage.temporaries.args.items() %}
+        struct kind_tmp_{{ arg_id }}_fields {
+            kind_tmp_{{ arg_id }}_fields(kind_tmp_{{ arg_id }}_info const& si) noexcept : si_(si) {}
+            kind_tmp_{{ arg_id }}_info si_;
+
+            {{ arg_info.type }}{{ ' const' if arg_info.readonly }}* ptr_ = nullptr;
+
+            void check() const noexcept {
+                assert(ptr_ != nullptr);
+            }
+
+            GT_FUNCTION void increment(int const offset) noexcept { ptr_ += offset; }
+            GT_FUNCTION void increment_i(int const i) noexcept { increment(si_.get_offset(i, 0, 0)); }
+            GT_FUNCTION void increment_j(int const j) noexcept { increment(si_.get_offset(0, j, 0)); }
+            GT_FUNCTION void increment_k(int const k) noexcept { increment(si_.get_offset(0, 0, k)); }
+
+            GT_FUNCTION void increment(int const nbx, int const nby, int const i, int const j, int const k) noexcept {
+                increment(si_.get_block_offset(nbx, nby));
+                increment(si_.get_offset(i, j, k));
+            }
+        } kind_tmp_{{ arg_id }}_fields_;
+      {%- endfor %}
+
+      {%- endfor %}
+
+      void check() const noexcept {
+          {%- for kind_id, kind_info in multistage["kinds"].items() %}
+            kind_{{ kind_id }}_fields_.check();
+          {%- endfor %}
+      }
+
+      GT_FUNCTION void increment_i(int const i = 1) noexcept {
+          {%- for kind_id, kind_info in multistage["kinds"].items() %}
+            kind_{{ kind_id }}_fields_.increment_i(i);
+          {%- endfor %}
+      }
+      GT_FUNCTION void increment_j(int const j = 1) noexcept {
+          {%- for kind_id, kind_info in multistage["kinds"].items() %}
+            kind_{{ kind_id }}_fields_.increment_j(j);
+          {%- endfor %}
+      }
+      GT_FUNCTION void increment_k(int const k = 1) noexcept {
+          {%- for kind_id, kind_info in multistage["kinds"].items() %}
+            kind_{{ kind_id }}_fields_.increment_k(k);
+          {%- endfor %}
+      }
+      GT_FUNCTION void increment(int const i, int const j, int const k) noexcept {
+          increment_i(i);
+          increment_j(j);
+          increment_k(k);
+      }
+
+      template <typename Grid>
+      GT_FUNCTION void initialize(const Grid& grid, int const iblock, int const jblock, int const k_pos) {
+          // move to block / thread
+          {%- for kind_id, kind_info in multistage["kinds"].items() %}
+            kind_{{ kind_id }}_fields_.initialize(blockIdx.x, blockIdx.y, iblock, jblock, k_pos);
+          {%- endfor %}
+      }
+      GT_FUNCTION_DEVICE void init_caches() noexcept {
+          {%- for k_cache in multistage["k_caches"] %}
+            {%- if k_cache.fill %}
+              {
+                  static constexpr const int kcache_start = {{ k_cache.min_extent }};
+                  {%- set forward = multistage.direction == "forward" %}
+                  {%- for i in range(k_cache.min_extent, k_cache.max_extent) %}
+                    {%- if k_cache.temporary %}
+                      k_caches_.arg_tmp_{{ k_cache.id }}_[-kcache_start + {{ i + 1 if forward else i }}] = {{ '__ldg' if k_cache.readonly else '*' -}}(
+                          kind_tmp_{{ k_cache.id }}_fields_.ptr_
+                          + kind_tmp_{{ k_cache.id }}_fields_.si_.get_offset(0, 0, {{ i if forward else i + 1 }}));
+                    {%- else %}
+                      k_caches_.arg_{{ k_cache.id }}_[-kcache_start + {{ i + 1 if forward else i }}] = {{ '__ldg' if k_cache.readonly else '*' -}}(
+                          kind_{{ k_cache.kind }}_fields_.ptr_{{ k_cache.id }}_
+                          + kind_{{ k_cache.kind }}_fields_.si_.get_offset(0, 0, {{ i if forward else i + 1 }}));
+                    {%- endif %}
+                  {%- endfor %}
+              }
+            {%- endif %}
+          {%- endfor %}
+      }
+      GT_FUNCTION_DEVICE void fill_caches() noexcept {
+          {%- if multistage.direction == "forward" %}
+            // we have forward, so shift downwards
+          {%- else %}
+            // we have backward, so shift upwards
+          {%- endif %}
+
+          {%- for k_cache in multistage["k_caches"] %}
+            {%- set forward = multistage.direction == "forward" %}
+            {%- set extent_range = range(k_cache.min_extent, k_cache.max_extent)|list %}
+            {%- set extent_range = extent_range if forward else extent_range|reverse|list %}
+            {%- if extent_range|length > 0 or k_cache.fill %}
+              {
+                  static constexpr const int kcache_start = {{ k_cache.min_extent }};
+                  {%- for i in extent_range %}
+                    k_caches_.arg_{{ 'tmp_' if k_cache.temporary }}{{ k_cache.id }}_[-kcache_start + {{ i if forward else i + 1 }}] =
+                        k_caches_.arg_{{ 'tmp_' if k_cache.temporary }}{{ k_cache.id }}_[-kcache_start + {{ i + 1 if forward else i }}];
+                  {%- endfor %}
+
+                  {%- if k_cache.fill %}
+                    {%- if k_cache.temporary %}
+                      k_caches_.arg_tmp_{{ k_cache.id }}_[-kcache_start + {{ k_cache.max_extent if forward else k_cache.min_extent }}] =
+                          {{ '__ldg' if k_cache.readonly else '*' -}}(
+                              kind_tmp_{{ k_cache.id }}_fields_.ptr_
+                              + kind_tmp_{{ k_cache.id }}_fields_.si_.get_offset(0, 0, {{ k_cache.max_extent if forward else k_cache.min_extent }}));
+                    {%- else %}
+                      k_caches_.arg_{{ k_cache.id }}_[-kcache_start + {{ k_cache.max_extent if forward else k_cache.min_extent }}] =
+                          {{ '__ldg' if k_cache.readonly else '*' -}}(
+                              kind_{{ k_cache.kind }}_fields_.ptr_{{ k_cache.id }}_
+                              + kind_{{ k_cache.kind }}_fields_.si_.get_offset(0, 0, {{ k_cache.max_extent if forward else k_cache.min_extent }}));
+                    {%- endif %}
+                  {%- endif %}
+              }
+            {%- endif %}
+          {%- endfor %}
+      }
+      GT_FUNCTION_DEVICE void flush_caches() noexcept {
+          {%- for k_cache in multistage["k_caches"] %}
+            {%- if k_cache.flush %}
+              {
+                  static constexpr const int kcache_start = {{ k_cache.min_extent }};
+                  {%- set offset = k_cache.min_extent if multistage.direction == "forward" else k_cache.max_extent %}
+                  {%- if k_cache.temporary %}
+                    *(kind_tmp_{{ k_cache.id }}_fields_.ptr_
+                        + kind_tmp_{{ k_cache.id }}_fields_.si_.get_offset(0, 0, {{ offset }})) =
+                        k_caches_.arg_tmp_{{ k_cache.id }}_[-kcache_start + {{ offset }}];
+                  {%- else %}
+                    *(kind_{{ k_cache.kind }}_fields_.ptr_{{ k_cache.id }}_
+                        + kind_{{ k_cache.kind }}_fields_.si_.get_offset(0, 0, {{ offset }})) =
+                        k_caches_.arg_{{ k_cache.id }}_[-kcache_start + {{ offset }}];
+                  {%- endif %}
+              }
+            {%- endif %}
+          {%- endfor %}
+      }
+      GT_FUNCTION_DEVICE void terminate_caches() noexcept {
+          {%- for k_cache in multistage["k_caches"] %}
+            {%- if k_cache.flush and k_cache.min_extent != k_cache.max_extent %}
+              {
+                  static constexpr const int kcache_start = {{ k_cache.min_extent }};
+                  {%- set forward = multistage.direction == "forward" %}
+                  {%- for i in range(k_cache.min_extent, k_cache.max_extent) %}
+                    {%- if k_cache.temporary %}
+                      *(kind_tmp_{{ k_cache.id }}_fields_.ptr_
+                          + kind_tmp_{{ k_cache.id }}_fields_.si_.get_offset(0, 0, {{ i if forward else i + 1 }})) =
+                          k_caches_.arg_tmp_{{ k_cache.id }}_[-kcache_start + {{ i + 1 if forward else i }}];
+                    {%- else %}
+                      *(kind_{{ k_cache.kind }}_fields_.ptr_{{ k_cache.id }}_
+                          + kind_{{ k_cache.kind }}_fields_.si_.get_offset(0, 0, {{ i if forward else i + 1 }})) =
+                          k_caches_.arg_{{ k_cache.id }}_[-kcache_start + {{ i + 1 if forward else i }}];
+                    {%- endif %}
+                  {%- endfor %}
+              }
+            {%- endif %}
+          {%- endfor %}
+      }
+
+      // resolve for not cached arguments (not temporaries)
+      {%- for kind_id, kind_info in multistage.kinds.items() %}
+        {%- for arg_id, arg_info in kind_info.args.items() %}
+          {%- if not "cached" in arg_info %}
+            GT_FUNCTION_DEVICE {{ arg_info.type }} resolve(std::integral_constant<unsigned, {{ arg_id }}>, gridtools::array<int, 3> const& offsets) const noexcept {
+              return {{ '__ldg' if arg_info.readonly else '*' -}}
+                  (kind_{{ kind_id }}_fields_.ptr_{{ arg_id }}_
+                  + kind_{{ kind_id }}_fields_.si_.get_offset(offsets[0], offsets[1], offsets[2]));
+            }
+            {%- if not arg_info.readonly %}
+              GT_FUNCTION_DEVICE {{ arg_info.type }}& resolve(std::integral_constant<unsigned, {{ arg_id }}>, gridtools::array<int, 3> const& offsets) noexcept {
+                  return *(kind_{{ kind_id }}_fields_.ptr_{{ arg_id }}_
+                      + kind_{{ kind_id }}_fields_.si_.get_offset(offsets[0], offsets[1], offsets[2]));
+              }
+            {%- endif %}
+          {%- endif %}
+        {%- endfor %}
+      {%- endfor %}
+
+      // resolve for not cached arguments (temporaries)
+      {%- for arg_id, arg_info in multistage.temporaries.args.items() %}
+        {%- if not "cached" in arg_info %}
+          GT_FUNCTION_DEVICE {{ arg_info.type }} resolve(std::integral_constant<unsigned, {{ arg_id }}>, gridtools::array<int, 3> const& offsets) const noexcept {
+            return {{ '__ldg' if arg_info.readonly else '*' -}}
+                (kind_tmp_{{ arg_id }}_fields_.ptr_
+                + kind_tmp_{{ arg_id }}_fields_.si_.get_offset(offsets[0], offsets[1], offsets[2]));
+          }
+          {%- if not arg_info.readonly %}
+            GT_FUNCTION_DEVICE {{ arg_info.type }}& resolve(std::integral_constant<unsigned, {{ arg_id }}>, gridtools::array<int, 3> const& offsets) noexcept {
+                return *(kind_tmp_{{ arg_id }}_fields_.ptr_
+                    + ikind_tmp_{{ arg_id }}_fields_.si_.get_offset(offsets[0], offsets[1], offsets[2]));
+            }
+          {%- endif %}
+        {%- endif %}
+      {%- endfor %}
+
+      // resolve for not ij caches
+      {%- for ij_cache in multistage["ij_caches"] %}
+        GT_FUNCTION_DEVICE {{ ij_cache.type }} resolve(std::integral_constant<unsigned, {{ ij_cache.id }}>, gridtools::array<int, 3> const& offsets) const noexcept {
+            return *(ij_caches_.arg_{{ 'tmp_' if ij_cache.temporary }}{{ ij_cache.id }}_ +
+                     ij_caches_.get_offset(offsets[0], offsets[1], offsets[2]));
+        }
+        {%- if not ij_cache.readonly %}
+          GT_FUNCTION_DEVICE {{ ij_cache.type }}& resolve(std::integral_constant<unsigned, {{ ij_cache.id }}>, gridtools::array<int, 3> const& offsets) noexcept {
+              return *(ij_caches_.{{ 'tmp_' if ij_cache.temporary }}{{ ij_cache.id }}_ +
+                       ij_caches_.get_offset(offsets[0], offsets[1], offsets[2]));
+          }
+        {%- endif %}
+      {%- endfor %}
+
+      // resolve for not k caches
+      {%- for k_cache in multistage["k_caches"] %}
+        GT_FUNCTION_DEVICE {{ k_cache.type }} resolve(std::integral_constant<unsigned, {{ k_cache.id }}>, gridtools::array<int, 3> const& offsets) const noexcept {
+            static constexpr const int kcache_start = {{ k_cache.min_extent }};
+            static constexpr const int kcache_end = {{ k_cache.max_extent }};
+            assert(offsets[0] == 0);
+            assert(offsets[1] == 0);
+            assert(offsets[2] >= kcache_start);
+            assert(offsets[2] <= kcache_end);
+            return k_caches_.arg_{{ 'tmp_' if k_cache.temporary }}{{ k_cache.id }}_[-kcache_start + offsets[2]];
+        }
+        {%- if not k_cache.readonly %}
+          GT_FUNCTION_DEVICE {{ k_cache.type }}& resolve(std::integral_constant<unsigned, {{ k_cache.id }}>, gridtools::array<int, 3> const& offsets) noexcept {
+              static constexpr const int kcache_start = {{ k_cache.min_extent }};
+              static constexpr const int kcache_end = {{ k_cache.max_extent }};
+              assert(offsets[0] == 0);
+              assert(offsets[1] == 0);
+              assert(offsets[2] >= kcache_start);
+              assert(offsets[2] <= kcache_end);
+              return k_caches_.arg_{{ 'tmp_' if k_cache.temporary }}{{ k_cache.id }}_[-kcache_start + offsets[2]];
+          }
+        {%- endif %}
+      {%- endfor %}
+
+      multistage_{{ multistage.id }}_ptrs(
+          {%- set comma = joiner(", ") %}
+          {%- for kind_id, kind_info in multistage.kinds.items() %}
+              {{- comma() }}kind_{{ kind_id }}_fields kind_{{ kind_id }}_fields
+          {%- endfor -%}
+          {%- for arg_id, arg_info in multistage.temporaries.args.items() %}
+              {{- comma() }}kind_tmp_{{ arg_id }}_fields kind_tmp_{{ arg_id }}_fields
+          {%- endfor -%}
+          )
+          {%- set comma = joiner(", ") %}
+          : {% for kind_id, kind_info in multistage.kinds.items() %}
+              {{- comma() }}kind_{{ kind_id }}_fields_(kind_{{ kind_id }}_fields)
+          {%- endfor %}
+          {%- for arg_id, arg_info in multistage.temporaries.args.items() %}
+              {{- comma() }}kind_tmp_{{ arg_id }}_fields_(kind_tmp_{{ arg_id }}_fields)
+          {%- endfor -%}{};
+  };
+{%- endfor %}

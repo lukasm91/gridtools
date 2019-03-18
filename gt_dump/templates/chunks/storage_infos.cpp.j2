@@ -1,0 +1,120 @@
+{#- TODO: We allow too much here: Temporaries only make sense for ij and ijk,
+  but there is quite some code for other cases
+#}
+{%- for field_id, field_info in context.temporaries.items() %}
+  class kind_tmp_{{ field_id }}_info {
+    public:
+      kind_tmp_{{- field_id }}_info(const std::array<int, {{ field_info|kind_dimension }}>& strides) noexcept
+          {%- set comma = joiner_first(sep=", ", first=': ') %}
+          {%- set info_ns = namespace() %}
+          {%- set info_ns.index = 0 %}
+          {%- for i in range(field_info.layout|length) %}
+            {%- if not field_info|masked(i) and not field_info|unitstride(i) %}
+              {{- comma() }}stride_{{ i }}_(strides[{{ info_ns.index }}])
+            {% endif %}
+            {%- set info_ns.index = info_ns.index + 1 if not field_info|masked(i) else info_ns.index %}
+          {%- endfor -%}
+      {
+          {%- set info_ns = namespace() %}
+          {%- set info_ns.index = 0 %}
+          {%- for i in range(field_info.layout|length) %}
+            {%- if field_info|unitstride(i) %}
+              assert(stride_{{ i }}_ == strides[{{ info_ns.index }}]);
+            {%- endif %}
+            {%- set info_ns.index = info_ns.index + 1 if not field_info|masked(i) else info_ns.index %}
+          {%- endfor -%}
+      }
+      kind_tmp_{{ field_id }}_info() = default;
+
+      GT_FUNCTION int get_offset(int i, int j, int k) const noexcept {
+          return i * stride_0_ + j * stride_1_ + k * stride_2_;
+      }
+      GT_FUNCTION int get_block_offset(int i_block, int j_block) const noexcept {
+          return stride_i_block_ * i_block + stride_j_block_ * j_block;
+      }
+
+    private:
+      static constexpr const int stride_0_ = {{ 1 if not field_info|masked(0) else 0 }}; // i_stride
+      {%- if field_info|masked(1) %}
+        static constexpr const int stride_1_ = 0; // j_stride
+      {%- elif field_info|masked(0) %}
+        static constexpr const int stride_1_ = 1; // j_stride
+      {%- else %}
+        static constexpr const int stride_1_ =  get_blocked_i_padded_length<computation_info::max_arg_extent>::value; // j_stride
+      {%- endif %}
+      {%- if field_info|masked(2) %}
+        static constexpr const int stride_2_ = 0; // k_stride
+      {%- elif field_info|masked(1) and field_info|masked(0) %}
+        static constexpr const int stride_2_ = 1; // k_stride
+      {%- elif field_info|masked(1) %}
+        static constexpr const int stride_2_ =  get_blocked_i_padded_length<computation_info::max_arg_extent>::value; // k_stride
+      {%- elif field_info|masked(0) %}
+        static constexpr const int stride_2_ =  get_blocked_j_padded_length<computation_info::max_arg_extent>::value; // k_stride
+      {%- else %}
+        static constexpr const int stride_2_ =  stride_1_ * get_blocked_j_padded_length<computation_info::max_arg_extent>::value; // k_stride
+      {%- endif %}
+
+      {%- if field_info|masked(0) %}
+        static constexpr const int stride_i_block_ = 0;
+      {%- else %}
+        int stride_i_block_;
+      {%- endif -%}
+
+      {%- if field_info|masked(1) %}
+        static constexpr const int stride_j_block_ = 0;
+      {%- else %}
+        int stride_j_block_;
+      {%- endif %}
+  };
+{% endfor %}
+
+{%- for kind_id, kind_info in context.kinds.items() %}
+  class kind_{{ kind_id }}_info {
+    public:
+      kind_{{- kind_id }}_info(const std::array<int, {{ kind_info|kind_dimension }}>& strides) noexcept
+          {%- set comma = joiner_first(sep=", ", first=': ') %}
+          {%- set info_ns = namespace() %}
+          {%- set info_ns.index = 0 %}
+          {%- for i in range(kind_info.layout|length) %}
+            {%- if not kind_info|masked(i) and not kind_info|unitstride(i) %}
+              {{- comma() }}stride_{{ i }}_(strides[{{ info_ns.index }}])
+            {% endif %}
+            {%- set info_ns.index = info_ns.index + 1 if not kind_info|masked(i) else info_ns.index %}
+          {%- endfor -%}
+      {
+          {%- set info_ns = namespace() %}
+          {%- set info_ns.index = 0 %}
+          {%- for i in range(kind_info.layout|length) %}
+            {%- if kind_info|unitstride(i) %}
+              assert(stride_{{ i }}_ == strides[{{ info_ns.index }}]);
+            {%- endif %}
+            {%- set info_ns.index = info_ns.index + 1 if not kind_info|masked(i) else info_ns.index %}
+          {%- endfor -%}
+      }
+      kind_{{ kind_id }}_info() = default;
+
+      GT_FUNCTION int get_offset(int i, int j, int k
+          {%- for i in range(kind_info.layout|length - 3) %}
+              , int n{{ i }} = 0
+          {%- endfor %}) const noexcept {
+        return i * stride_0_ + j * stride_1_ + k * stride_2_
+          {%- for i in range(kind_info.layout|length - 3) %}
+              + stride_{{ i + 3 }}_ * n{{ i }}
+          {%- endfor %};
+      }
+      GT_FUNCTION int get_block_offset(int i_block, int j_block) const noexcept {
+          return get_offset(gen::block_i_size * i_block, gen::block_j_size * j_block, 0);
+      }
+
+    private:
+      {%- for i in range(kind_info.layout|length) %}
+        {%- if kind_info|unitstride(i) %}
+          static constexpr const int stride_{{ i }}_ = 1;
+        {%- elif kind_info|masked(i) %}
+          static constexpr const int stride_{{ i }}_ = 0;
+        {%- else %}
+          int stride_{{ i }}_;
+        {%- endif %}
+      {%- endfor %}
+  };
+{% endfor %}

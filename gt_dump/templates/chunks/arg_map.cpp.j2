@@ -1,0 +1,12 @@
+{%- for multistage in context.multistages %}
+  {%- set arguments = context.arguments %}
+  {%- for independent_stage_list in multistage.stages %}
+    {%- for stage in independent_stage_list %}
+      struct arg_map_{{ multistage.id }}_stage_{{ stage.id }}_{{ stage.name }} {
+      {%- for mapper in stage.argmap %}
+        GT_FUNCTION constexpr std::integral_constant<unsigned, {{ mapper.arg[1] }}> operator()(gridtools::accessor<{{ mapper.accessor }}>) const;
+      {%- endfor %}
+      };
+    {%- endfor %}
+  {%- endfor %}
+{%- endfor %}

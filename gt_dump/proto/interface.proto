@@ -1,0 +1,121 @@
+syntax = "proto3";
+package gt_gen;
+
+message Interval {
+    message Level {
+        int32 splitter = 1;
+        int32 offset = 2;
+    }
+    Level begin = 1;
+    Level end = 2;
+}
+message StageInterval {
+    enum Overload {
+        INTERVAL = 0;
+        NO_INTERVAL = 1;
+    }
+    Interval interval = 1;
+    Overload overload = 2;
+}
+
+message Extent {
+    int32 iminus = 1;
+    int32 iplus = 2;
+    int32 jminus = 3;
+    int32 jplus = 4;
+    int32 kminus = 5;
+    int32 kplus = 6;
+}
+
+message GlobalAccessor {
+    int32 id = 1;
+}
+message NormalAccessor {
+    enum Intent {
+        READ_ONLY = 0;
+        READ_WRITE = 1;
+    }
+
+    int32 id = 1;
+    Extent extent = 2;
+    Intent intent = 3;
+    int32 dimension = 4;
+}
+message Accessor {
+    oneof accessor {
+        NormalAccessor normal_accessor = 1;
+        GlobalAccessor global_accessor = 2;
+    }
+}
+
+message Stage {
+    repeated StageInterval intervals = 2;
+    repeated Accessor accessors = 3;
+}
+
+message KCache {
+    int32 id = 1;
+    bool temporary = 5;
+    bool fill = 2;
+    bool flush = 3;
+    string type = 4;
+}
+
+message IJCache {
+    int32 id = 1;
+    bool temporary = 5;
+    string type = 4;
+}
+
+message Multistage {
+    enum Policy {
+        FORWARD = 0;
+        BACKWARD = 1;
+        PARALLEL = 2;
+    }
+    Policy policy = 1;
+    repeated KCache k_caches = 2;
+    repeated IJCache ij_caches = 3;
+
+    message IndependentStage {
+        message Arg {
+            int32 id = 1;
+            bool temporary = 2;
+        }
+        string name = 1;
+        repeated Arg args = 2;
+    }
+    message DependentStageList {
+        repeated IndependentStage independent_stages = 1;
+    }
+    repeated DependentStageList dependent_stages = 4;
+}
+message GlobalParameter {
+    string type = 1;
+}
+
+message Computation {
+    map<string, Stage> stages = 1;
+    repeated Multistage multistages = 2;
+
+    message Temporary {
+        repeated bool selector = 2;
+        string type = 3;
+    }
+    map<int32, Temporary> temporaries = 3;
+    map<int32, GlobalParameter> global_params = 6;
+
+    message Fields {
+        message Kind {
+            repeated int32 layout = 2;
+        }
+        message Arg {
+            int32 kind = 2;
+            string type = 3;
+        }
+        map<int32, Kind> kinds = 1;
+        map<int32, Arg> args = 2;
+    }
+    Fields fields = 4;
+    bool positional = 5;
+}

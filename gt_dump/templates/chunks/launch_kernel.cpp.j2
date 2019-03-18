@@ -1,0 +1,117 @@
+namespace {
+    template <int VBoundary>
+    struct get_padded_boundary
+        : std::integral_constant<int, VBoundary <= 1 ? 1 : VBoundary <= 2 ? 2 : VBoundary <= 4 ? 4 : 8> {
+        GT_STATIC_ASSERT(VBoundary >= 0 && VBoundary <= 8, "TOO LARGE EXTENT");
+    };
+}
+
+{%- for multistage in context.multistages %}
+  {%- set mss_id = loop.index0 %}
+  template <typename Grid>
+  __global__ void launch_kernel_{{ multistage.id }}(multistage_{{ multistage.id }}_ptrs ptrs, Grid grid) {
+
+      static constexpr const int OffsetLimit = 3; // TODO
+
+      using mss_info = multistage_{{ multistage.id }}_info;
+      int const nx = grid.i_high_bound() - grid.i_low_bound() + 1;
+      int const ny = grid.j_high_bound() - grid.j_low_bound() + 1;
+
+      int const current_block_i_size =
+          (blockIdx.x + 1) * gen::block_i_size < nx ? gen::block_i_size : nx - blockIdx.x * gen::block_i_size;
+      int const current_block_j_size =
+          (blockIdx.y + 1) * gen::block_j_size < ny ? gen::block_j_size : ny - blockIdx.y * gen::block_j_size;
+
+      static constexpr auto jboundary_limit =
+          gen::block_j_size + mss_info::max_stage_extent::jplus() - mss_info::max_stage_extent::jminus();
+      static constexpr auto iminus_limit = jboundary_limit + (mss_info::max_stage_extent::iminus() < 0 ? 1 : 0);
+      static constexpr auto iplus_limit = iminus_limit + (mss_info::max_stage_extent::iplus() > 0 ? 1 : 0);
+
+      int iblock = mss_info::max_stage_extent::iminus() - 1;
+      int jblock = mss_info::max_stage_extent::jminus() - 1;
+      if ((int)threadIdx.y < jboundary_limit) {
+          iblock = (int)threadIdx.x;
+          jblock = (int)threadIdx.y + mss_info::max_stage_extent::jminus();
+      } else if ((int)threadIdx.y < iminus_limit) {
+          static constexpr int padded_boundary = get_padded_boundary<-mss_info::max_stage_extent::iminus()>::value;
+          iblock = -padded_boundary + (int)threadIdx.x % padded_boundary;
+          jblock = mss_info::max_stage_extent::jminus() + (int)threadIdx.x / padded_boundary;
+      } else if ((int)threadIdx.y < iplus_limit) {
+          static constexpr int padded_boundary = get_padded_boundary<+mss_info::max_stage_extent::iplus()>::value;
+          iblock = gen::block_i_size + (int)threadIdx.x % padded_boundary;
+          jblock = mss_info::max_stage_extent::jminus() + (int)threadIdx.x / padded_boundary;
+      }
+
+      {%- if multistage.direction == "forward" %}
+        {%- set init_interval = multistage.intervals[0].interval[0] %}
+      {%- else %}
+        {%- set init_interval = multistage.intervals[-1].interval[1] %}
+      {%- endif %}
+      ptrs.initialize(
+          grid, iblock, jblock, (int)grid.template value_at<gridtools::level<{{ init_interval[0]}}, {{init_interval[1]}}, OffsetLimit>>());
+
+      ptrs.init_caches();
+
+      {%- for ij_cache in multistage.ij_caches %}
+        {%- if index == 1 %}
+          static constexpr int ij_cache_i_size = gen::block_i_size +
+                                                 -mss_info::max_stage_extent::iminus() +
+                                                 mss_info::max_stage_extent::iplus();
+          static constexpr int ij_cache_j_size = gen::block_j_size +
+                                                 -mss_info::max_stage_extent::jminus() +
+                                                 mss_info::max_stage_extent::jplus();
+        {%- endif %}
+        __shared__ {{ ij_cache.type }} arg_{{ 'tmp_' if ij_cache.temporary }}{{ ij_cache.id }}[ij_cache_j_size * ij_cache_i_size];
+        if (iblock >= mss_info::max_stage_extent::iminus() &&
+            iblock < current_block_i_size + mss_info::max_stage_extent::iplus() &&
+            jblock >= mss_info::max_stage_extent::jminus() &&
+            jblock < current_block_j_size + mss_info::max_stage_extent::jplus()) {
+
+            ptrs.ij_caches_.arg_{{ 'tmp_' if ij_cache.temporary }}{{ ij_cache.id }}_ =
+                &arg_{{ 'tmp_' if ij_cache.temporary }}{{ ij_cache.id }}[(jblock + -mss_info::max_stage_extent::jminus()) * ij_cache_i_size
+                                  + iblock + -mss_info::max_stage_extent::iminus()];
+        }
+      {%- endfor %}
+
+      {%- for interval in (multistage.intervals if multistage.direction == "forward" else multistage.intervals|reverse) %}
+        for (int z = (int)grid.template value_at<gridtools::level<{{ interval.interval[0][0] }}, {{ interval.interval[0][1] }}, OffsetLimit>>();
+             z <= (int)grid.template value_at<gridtools::level<{{ interval.interval[1][0] }}, {{ interval.interval[1][1] }}, OffsetLimit>>();
+             ++z, ptrs.increment_k({{ '1' if multistage.direction == "forward" else '-1' }})) {
+            ptrs.fill_caches();
+
+            {%- for independent_stage_list in interval.stages %}
+              {%- if not loop.first %}
+                __syncthreads();
+              {%- endif %}
+              {%- for stage in independent_stage_list %}
+                using stage_{{ stage.id }}_extent =
+                    multistage_{{ multistage.id }}_info::stage_{{ stage.id }}_{{ stage.name }}::stage_extent;
+                if (iblock >= stage_{{ stage.id }}_extent::iminus()
+                    && iblock < current_block_i_size + stage_{{ stage.id }}_extent::iplus()
+                    && jblock >= stage_{{ stage.id }}_extent::jminus()
+                    && jblock < current_block_j_size + stage_{{ stage.id }}_extent::jplus()) {
+
+                    auto eval = Eval<multistage_{{ multistage.id }}_ptrs,
+                        arg_map_{{ multistage.id }}_stage_{{ stage.id }}_{{ stage.name }}>{ptrs};
+                    {{ stage.name }}::apply(eval
+                        {%- if interval.overload != "none" -%}
+                            , gridtools::interval<
+                                gridtools::level<{{ interval.interval[0][0] }}, {{ interval.interval[0][1] }}, OffsetLimit>,
+                                gridtools::level<{{ interval.interval[1][0] }}, {{ interval.interval[1][1] }}, OffsetLimit>
+                            >{}
+                        {%- endif %});
+                }
+              {%- endfor %}
+            {%- endfor %}
+
+            ptrs.flush_caches();
+
+            {%- if multistage.ij_caches and multistage.ij_caches|length > 0 %}
+              __syncthreads(); // needed because we have an ij cache
+            {%- endif %}
+        }
+      {%- endfor %}
+
+      ptrs.terminate_caches();
+  }
+{%- endfor %}

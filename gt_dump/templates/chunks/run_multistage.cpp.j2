@@ -1,0 +1,36 @@
+{%- for multistage in context.multistages %}
+  template <typename Grid>
+  void run_multistage_{{ multistage.id }}(multistage_{{ multistage.id }}_ptrs const& ptrs, Grid const& grid) {
+      using mss_info = multistage_{{ multistage.id }}_info;
+
+      ptrs.check();
+
+      gridtools::uint_t const nx = grid.i_high_bound() - grid.i_low_bound() + 1;
+      gridtools::uint_t const ny = grid.j_high_bound() - grid.j_low_bound() + 1;
+      gridtools::uint_t const nz = grid.k_total_length();
+
+      static constexpr int jplus_warps = mss_info::max_stage_extent::jplus();
+      static constexpr int jminus_warps = -mss_info::max_stage_extent::jminus();
+      static constexpr int iplus_warps = mss_info::max_stage_extent::iplus() > 0 ? 1 : 0;
+      static constexpr int iminus_warps = mss_info::max_stage_extent::iminus() < 0 ? 1 : 0;
+      static constexpr int halo_processing_warps = jplus_warps + jminus_warps + iplus_warps + iminus_warps;
+
+      dim3 threads{gen::block_i_size, gen::block_j_size + halo_processing_warps, 1};
+
+      gridtools::uint_t const num_blocks_i = (nx + gen::block_i_size - 1) / gen::block_i_size;
+      gridtools::uint_t const num_blocks_j = (ny + gen::block_j_size - 1) / gen::block_j_size;
+      gridtools::uint_t const num_blocks_k = 1;
+
+      dim3 blocks{num_blocks_i, num_blocks_j, num_blocks_k};
+
+  #ifdef __CUDACC__
+      launch_kernel_{{ multistage.id }}<<<blocks, threads>>>(ptrs, grid);
+  #else
+      launch_kernel_{{ multistage.id }}(ptrs, grid);
+  #endif
+  #ifndef NDEBUG
+      if (cudaDeviceSynchronize() != cudaSuccess)
+          throw std::runtime_error("error in multistage 1");
+  #endif
+  }
+{%- endfor %}

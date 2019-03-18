@@ -297,10 +297,20 @@ for kind_id, kind_info in computation.fields.kinds.items():
     context["kinds"][kind_id] = {}
     context["kinds"][kind_id]["layout"] = list(kind_info.layout)
 
+# args
+context["args"] = {}
+for arg_id, arg_info in computation.fields.args.items():
+    context["args"][arg_id] = {
+        "kind": arg_info.kind,
+        "type": arg_info.type,
+        "readonly": False, # TODO
+    }
+
 context["temporaries"] = {}
 for field_id, field_info in computation.temporaries.items():
     context["temporaries"][field_id] = {}
     context["temporaries"][field_id]["selector"] = list(field_info.selector)
+    context["temporaries"][field_id]["type"] = field_info.type
 
 context["multistages"] = multistages
 context["name"] = h.hexdigest()

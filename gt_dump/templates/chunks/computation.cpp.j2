@@ -1,0 +1,125 @@
+template<typename Grid>
+struct generated_computation {
+    // all temporary arguments (origin points to allocation, non-origin points to compute domain)
+    {%- for arg_id, arg_info in context.temporaries.items() %}
+      kind_tmp_{{ arg_id }}_info kind_tmp_{{ arg_id }}_;
+      {{ arg_info.type }}* ptr_tmp_{{ arg_id }}_ = nullptr;
+      {{ arg_info.type }}* ptr_tmp_{{ arg_id }}_origin_ = nullptr;
+    {%- endfor %}
+
+    Grid grid_;
+
+    generated_computation(Grid const& grid);
+    ~generated_computation();
+
+    void run(
+        {%- set comma = joiner(", ") -%}
+        {%- for kind_id, kind_info in context.kinds|dictsort() %}
+          {{- comma() }} const std::array<int, {{ kind_info.layout|reject("equalto", -1)|list|length }}>& strides_{{ kind_id }}
+        {%- endfor %}
+        {%- for arg_id, arg_info in context.args|dictsort() %}
+            {{- comma() }} {{- arg_info.type }}{{ ' const' if arg_info.read_only }} *ptr_{{ arg_id }}
+        {%- endfor %});
+};
+template<typename Grid>
+generated_computation<Grid>::generated_computation(Grid const& grid)
+    : grid_(grid) {
+
+    static constexpr int alignment = 128 / sizeof(double);
+
+    gridtools::uint_t const nx = grid_.i_high_bound() - grid_.i_low_bound() + 1;
+    gridtools::uint_t const ny = grid_.j_high_bound() - grid_.j_low_bound() + 1;
+
+    gridtools::uint_t const num_blocks_i = (nx + gen::block_i_size - 1) / gen::block_i_size;
+    gridtools::uint_t const num_blocks_j = (ny + gen::block_j_size - 1) / gen::block_j_size;
+
+    static constexpr const int i_padded_length = get_blocked_i_padded_length<computation_info::max_arg_extent>::value;
+    static constexpr const int j_padded_length = get_blocked_j_padded_length<computation_info::max_arg_extent>::value;
+
+    int const k_padded_length = grid_.k_total_length();
+    {% for arg_id, arg_info in context.temporaries.items() %}
+      {%- set comma = joiner(", ") %}
+      kind_tmp_{{ arg_id }}_ = {
+          {%- if not arg_info|masked(0) %}
+            {{- comma() -}}
+            i_padded_length
+            {{- '* j_padded_length' if not arg_info|masked(1) }}
+            {{- '* k_padded_length' if not arg_info|masked(2) }}
+          {%- endif %}
+          {%- if not arg_info|masked(1) %}
+            {{- comma() -}}
+            {{- 'i_padded_length * ' if not arg_info|masked(0) }}
+            j_padded_length
+            {{- ' * k_padded_length ' if not arg_info|masked(2) }}
+            {{- ' * num_blocks_i' if not arg_info|masked(0) }}
+          {%- endif -%}
+      };
+    {%- endfor %}
+
+    auto const initial_i_offset = (-computation_info::max_arg_extent::iminus() + alignment - 1) / alignment * alignment;
+
+    {% for arg_id, arg_info in context.temporaries.items() -%}
+      if (cudaMalloc((void**)(&ptr_tmp_{{ arg_id }}_origin_),
+          {{- 'i_padded_length * ' if not arg_info|masked(0) }}
+          {{- 'j_padded_length * ' if not arg_info|masked(1) }}
+          {{- 'k_padded_length * ' if not arg_info|masked(2) }}
+          {{- 'num_blocks_i * ' if not arg_info|masked(0) }}
+          {{- 'num_blocks_j * ' if not arg_info|masked(1) -}}
+          sizeof({{ arg_info.type }})
+          {{- '+ initial_i_offset' if not arg_info|masked(0) }}) != cudaSuccess)
+          throw std::runtime_error("cudaMalloc failed");
+    {%- endfor %}
+    auto const initial_j_offset = -computation_info::max_arg_extent::jminus();
+    {% for arg_id, arg_info in context.temporaries.items() -%}
+      ptr_tmp_{{ arg_id }}_ = ptr_tmp_{{ arg_id }}_origin_
+          {{- '+ initial_i_offset' if not arg_info|masked(0) }}
+          {%- if not arg_info|masked(1) %}
+            + initial_j_offset {{ '* i_padded_length' if not arg_info|masked(0) }};
+          {%- endif %}
+    {%- endfor %}
+}
+template<typename Grid>
+generated_computation<Grid>::~generated_computation() {
+    {%- for arg_id, arg_info in context.temporaries.items() %}
+      cudaFree(ptr_tmp_{{ arg_id }}_origin_);
+    {%- endfor %}
+}
+template<typename Grid>
+void generated_computation<Grid>::run(
+        {%- set comma = joiner(", ") -%}
+        {%- for kind_id, kind_info in context.kinds|dictsort() %}
+          {{- comma() }} const std::array<int, {{ kind_info.layout|reject("equalto", -1)|list|length }}>& strides_{{ kind_id }}
+        {%- endfor %}
+        {%- for arg_id, arg_info in context.args|dictsort() %}
+          {{- comma() }} {{ arg_info.type }}{{ ' const' if arg_info.read_only }} *ptr_{{ arg_id }}
+        {%- endfor %}) {
+
+    {%- for multistage in context.multistages %}
+      {
+          {%- for arg_id, arg_info in multistage.temporaries.args.items() %}
+            multistage_{{ multistage.id }}_ptrs::kind_tmp_{{ arg_id }}_fields kind_tmp_{{ arg_id }}_fields{kind_tmp_{{ arg_id }}_};
+            kind_tmp_{{ arg_id }}_fields.ptr_ = ptr_tmp_{{ arg_id }}_;
+          {%- endfor %}
+
+          {%- for kind_id, kind_info in multistage.kinds.items() %}
+            kind_{{ kind_id }}_info kind_{{ kind_id }}_info {strides_{{ kind_id }}};
+            multistage_{{ multistage.id }}_ptrs::kind_{{ kind_id }}_fields kind_{{ kind_id }}_fields{kind_{{ kind_id }}_info};
+            {%- for arg_id, arg_info in kind_info.args.items() %}
+              kind_{{ kind_id }}_fields.ptr_{{ arg_id }}_ = ptr_{{ arg_id }};
+            {%- endfor %}
+            kind_{{ kind_id }}_fields.initialize(0, 0, grid_.i_low_bound(), grid_.j_low_bound(), 0);
+          {%- endfor %}
+
+          multistage_{{ multistage.id }}_ptrs ptrs{
+              {%- set comma = joiner(", ") %}
+              {%- for kind_id, kind_info in multistage.kinds.items() %}
+                  {{- comma() }}kind_{{ kind_id }}_fields
+              {%- endfor -%}
+              {%- for arg_id, arg_info in multistage.temporaries.args.items() %}
+                  {{- comma() }}kind_tmp_{{ arg_id }}_fields
+              {%- endfor -%}};
+          run_{{ multistage.name }}(ptrs, grid_);
+
+      }
+    {%- endfor %}
+}
