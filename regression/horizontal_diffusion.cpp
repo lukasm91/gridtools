@@ -78,6 +78,8 @@ struct out_function {
 
 using horizontal_diffusion = regression_fixture<2>;
 
+#include GT_DUMP_GENERATED_CODE(test)
+
 TEST_F(horizontal_diffusion, test) {
     tmp_arg<0> p_lap;
     tmp_arg<1> p_flx;
@@ -90,7 +92,8 @@ TEST_F(horizontal_diffusion, test) {
 
     horizontal_diffusion_repository repo(d1(), d2(), d3());
 
-    auto comp = make_computation(p_in = make_storage(repo.in),
+    auto comp = make_computation(GT_DUMP_IDENTIFIER(test),
+        p_in = make_storage(repo.in),
         p_out = out,
         p_coeff = make_storage(repo.coeff),
         make_multistage(execute::parallel(),

@@ -1,6 +1,3 @@
-// #include <gt_dump/generator.hpp>
-#include <gt_dump/use_generated.hpp>
-
 /*
  * GridTools
  *
@@ -162,11 +159,11 @@ struct vertical_advection_dycore : regression_fixture<3, axis_t> {
     arg<3> p_u_pos;
     arg<4> p_utens;
     arg<5, scalar_storage_type> p_dtr_stage;
-    tmp_arg<0> p_acol;
-    tmp_arg<1> p_bcol;
-    tmp_arg<2> p_ccol;
-    tmp_arg<3> p_dcol;
-    tmp_arg<4> p_data_col;
+    tmp_arg<100> p_acol;
+    tmp_arg<101> p_bcol;
+    tmp_arg<102> p_ccol;
+    tmp_arg<103> p_dcol;
+    tmp_arg<104> p_data_col;
 
     vertical_advection_repository repo{d1(), d2(), d3()};
 
@@ -175,8 +172,8 @@ struct vertical_advection_dycore : regression_fixture<3, axis_t> {
     void verify_utens_stage() { verify(make_storage(repo.utens_stage_out), utens_stage); }
 };
 
-GT_DUMP_GENERATED_CODE(test);
-GT_DUMP_GENERATED_CODE(with_extent);
+#include GT_DUMP_GENERATED_CODE(test)
+#include GT_DUMP_GENERATED_CODE(with_extent)
 
 TEST_F(vertical_advection_dycore, test) {
     auto comp = make_computation(GT_DUMP_IDENTIFIER(test),

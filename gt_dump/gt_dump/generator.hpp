@@ -74,7 +74,7 @@ namespace gridtools {
                 using plh = plh<Tag, DataStoreType, LocationType, Temporary>;
 
                 using layout_map = typename DataStoreType::storage_info_t::layout_t;
-                if (layout_map::masked_length == 1 && layout_map::at(1) == -1) {
+                if (layout_map::unmasked_length == 0) {
                     (*computation->mutable_global_params())[get_tag<Tag>::value].set_type(
                         boost::core::demangle(typeid(typename DataStoreType::data_t).name()));
                     return;

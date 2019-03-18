@@ -55,6 +55,8 @@ if( COMPONENT_COMMON )
     target_link_libraries(common INTERFACE gridtools)
 endif()
 
+add_subdirectory(gt_dump)
+
 if( COMPONENT_BOUNDARY_CONDITIONS )
     generate_target_for(NAME boundary-conditions)
     target_link_libraries( boundary-conditions INTERFACE common )

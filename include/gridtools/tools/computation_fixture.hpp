@@ -73,16 +73,16 @@ namespace gridtools {
         static constexpr arg<8> p_8 = {};
         static constexpr arg<9> p_9 = {};
 
-        static constexpr tmp_arg<0> p_tmp_0 = {};
-        static constexpr tmp_arg<1> p_tmp_1 = {};
-        static constexpr tmp_arg<2> p_tmp_2 = {};
-        static constexpr tmp_arg<3> p_tmp_3 = {};
-        static constexpr tmp_arg<4> p_tmp_4 = {};
-        static constexpr tmp_arg<5> p_tmp_5 = {};
-        static constexpr tmp_arg<6> p_tmp_6 = {};
-        static constexpr tmp_arg<7> p_tmp_7 = {};
-        static constexpr tmp_arg<8> p_tmp_8 = {};
-        static constexpr tmp_arg<9> p_tmp_9 = {};
+        static constexpr tmp_arg<100> p_tmp_0 = {};
+        static constexpr tmp_arg<101> p_tmp_1 = {};
+        static constexpr tmp_arg<102> p_tmp_2 = {};
+        static constexpr tmp_arg<103> p_tmp_3 = {};
+        static constexpr tmp_arg<104> p_tmp_4 = {};
+        static constexpr tmp_arg<105> p_tmp_5 = {};
+        static constexpr tmp_arg<106> p_tmp_6 = {};
+        static constexpr tmp_arg<107> p_tmp_7 = {};
+        static constexpr tmp_arg<108> p_tmp_8 = {};
+        static constexpr tmp_arg<109> p_tmp_9 = {};
 
         auto make_grid() const
             GT_AUTO_RETURN(::gridtools::make_grid(i_halo_descriptor(), j_halo_descriptor(), Axis{m_d3}));
@@ -188,12 +188,12 @@ namespace gridtools {
         }
     };
 
-#define GT_DEFINE_COMPUTATION_FIXTURE_PLH(I)                                    \
-    template <size_t HaloSize, class Axis>                                      \
-    constexpr typename computation_fixture<HaloSize, Axis>::template arg<I>     \
-        computation_fixture<HaloSize, Axis>::p_##I;                             \
-    template <size_t HaloSize, class Axis>                                      \
-    constexpr typename computation_fixture<HaloSize, Axis>::template tmp_arg<I> \
+#define GT_DEFINE_COMPUTATION_FIXTURE_PLH(I)                                          \
+    template <size_t HaloSize, class Axis>                                            \
+    constexpr typename computation_fixture<HaloSize, Axis>::template arg<I>           \
+        computation_fixture<HaloSize, Axis>::p_##I;                                   \
+    template <size_t HaloSize, class Axis>                                            \
+    constexpr typename computation_fixture<HaloSize, Axis>::template tmp_arg<100 + I> \
         computation_fixture<HaloSize, Axis>::p_tmp_##I
 
 #ifndef GT_ICOSAHEDRAL_GRIDS
