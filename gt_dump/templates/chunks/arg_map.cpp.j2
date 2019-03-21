@@ -4,7 +4,9 @@
     {%- for stage in independent_stage_list %}
       struct arg_map_{{ multistage.id }}_stage_{{ stage.id }}_{{ stage.name }} {
       {%- for mapper in stage.argmap %}
-        GT_FUNCTION constexpr std::integral_constant<unsigned, {{ mapper.arg[1] }}> operator()(gridtools::accessor<{{ mapper.accessor }}>) const;
+        template <intent Intent, typename Extent, ushort_t Number>
+        GT_FUNCTION constexpr std::integral_constant<unsigned, {{ mapper.arg[1] }}> operator()(
+            gridtools::accessor<{{ mapper.accessor }}, Intent, Extent, Number>) const;
       {%- endfor %}
       };
     {%- endfor %}

@@ -103,7 +103,11 @@ namespace gen_{{ context.name }}_{{ context.hash }} {
             typename ArgPosition = GT_META_CALL(gridtools::meta::st_position, (bound_arg_keys, std::integral_constant<uint_t, ArgId>)),
             typename Placeholder = GT_META_CALL(gridtools::meta::at, (std::tuple<BoundPlaceholders...>, ArgPosition)),
             typename StorageInfo = typename Placeholder::data_store_t::storage_info_t>
-        using si_position_t = GT_META_CALL(gridtools::meta::st_position, (storage_infos, StorageInfo));
+        struct si_position {
+            using type = GT_META_CALL(gridtools::meta::st_position, (storage_infos, StorageInfo));
+        };
+        template <uint_t ArgId>
+        using si_position_t = typename si_position<ArgId>::type;
 
         template <uint_t ArgId>
         using stride_t = GT_META_CALL(gridtools::meta::at, (stride_arrays, si_position_t<ArgId>));

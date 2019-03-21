@@ -5,6 +5,7 @@ file(STRINGS "version.txt" GT_VERSION)
 project(GridTools VERSION ${GT_VERSION} LANGUAGES CXX)
 
 list (APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_LIST_DIR}/cmake")
+set(BUILD_SHARED_LIBS OFF)
 
 include(CTest)
 

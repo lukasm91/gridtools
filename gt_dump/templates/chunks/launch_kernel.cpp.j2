@@ -83,18 +83,18 @@ namespace {
               {%- if not loop.first %}
                 __syncthreads();
               {%- endif %}
-              {%- for stage in independent_stage_list %}
-                using stage_{{ stage.id }}_extent =
-                    multistage_{{ multistage.id }}_info::stage_{{ stage.id }}_{{ stage.name }}::stage_extent;
-                if (iblock >= stage_{{ stage.id }}_extent::iminus()
-                    && iblock < current_block_i_size + stage_{{ stage.id }}_extent::iplus()
-                    && jblock >= stage_{{ stage.id }}_extent::jminus()
-                    && jblock < current_block_j_size + stage_{{ stage.id }}_extent::jplus()) {
+              {%- for interval_stage in independent_stage_list %}
+                using stage_{{ interval_stage.id }}_extent =
+                    multistage_{{ multistage.id }}_info::stage_{{ interval_stage.id }}_{{ interval_stage.name }}::stage_extent;
+                if (iblock >= stage_{{ interval_stage.id }}_extent::iminus()
+                    && iblock < current_block_i_size + stage_{{ interval_stage.id }}_extent::iplus()
+                    && jblock >= stage_{{ interval_stage.id }}_extent::jminus()
+                    && jblock < current_block_j_size + stage_{{ interval_stage.id }}_extent::jplus()) {
 
                     auto eval = Eval<multistage_{{ multistage.id }}_ptrs,
-                        arg_map_{{ multistage.id }}_stage_{{ stage.id }}_{{ stage.name }}>{ptrs};
-                    {{ stage.name }}::apply(eval
-                        {%- if interval.overload != "none" -%}
+                        arg_map_{{ multistage.id }}_stage_{{ interval_stage.id }}_{{ interval_stage.name }}>{ptrs};
+                    {{ interval_stage.name }}::apply(eval
+                        {%- if interval_stage.overload != "none" -%}
                             , gridtools::interval<
                                 gridtools::level<{{ interval.interval[0][0] }}, {{ interval.interval[0][1] }}, OffsetLimit>,
                                 gridtools::level<{{ interval.interval[1][0] }}, {{ interval.interval[1][1] }}, OffsetLimit>

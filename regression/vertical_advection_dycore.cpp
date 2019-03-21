@@ -202,7 +202,7 @@ TEST_F(vertical_advection_dycore, test) {
 
 TEST_F(vertical_advection_dycore, with_extents) {
     auto comp = make_computation(GT_DUMP_IDENTIFIER(with_extent),
-        p_utens_stage = utens_stage,
+        // p_utens_stage = utens_stage,
         p_u_stage = make_storage(repo.u_stage),
         p_wcon = make_storage(repo.wcon),
         p_u_pos = make_storage(repo.u_pos),
@@ -221,6 +221,6 @@ TEST_F(vertical_advection_dycore, with_extents) {
             make_stage_with_extent<u_backward_function, extent<>>(
                 p_utens_stage, p_u_pos, p_dtr_stage, p_ccol, p_dcol, p_data_col)));
 
-    comp.run();
+    comp.run(p_utens_stage = utens_stage);
     verify_utens_stage();
 }

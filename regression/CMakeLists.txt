@@ -72,12 +72,23 @@ function (gt_copy_target new_target old_target)
 endfunction()
 
 function(gt_use_dumped_data target)
+
+    find_package(Protobuf REQUIRED)
+
+    if (TARGET gtgen_proto)
+    else()
+        add_library(gtgen_proto /home/lukas/documents/work/test/cpp_interface/interface.pb.cc)
+        target_include_directories(gtgen_proto PUBLIC /home/lukas/documents/work/test/cpp_interface/)
+        target_link_libraries(gtgen_proto ${Protobuf_LIBRARIES})
+    endif()
+
     target_compile_definitions(${target}  PRIVATE GT_DUMP_DATA_FOLDER=${GT_DUMP_DATA_FOLDER})
     target_include_directories(${target}  PUBLIC ../gt_dump)
     target_link_libraries(${target} stdc++fs)
 
     if (GT_DUMP_GENERATE_DATA)
         target_compile_definitions(${target} PRIVATE GT_DUMP_GENERATE_DATA)
+        target_link_libraries(${target} gtgen_proto)
     else()
         get_target_property(target_sources ${target} SOURCES)
         set(new_sources)
@@ -103,6 +114,16 @@ function(gt_use_dumped_data target)
                     MAIN_DEPENDENCY ${generated_file_source}
                     DEPENDS
                         ${PROJECT_SOURCE_DIR}/gt_dump/generate_code.py
+                        ${PROJECT_SOURCE_DIR}/gt_dump/templates/generator.cpp.j2
+                        ${PROJECT_SOURCE_DIR}/gt_dump/templates/chunks/extent.cpp.j2
+                        ${PROJECT_SOURCE_DIR}/gt_dump/templates/chunks/block_helpers.cpp.j2
+                        ${PROJECT_SOURCE_DIR}/gt_dump/templates/chunks/storage_infos.cpp.j2
+                        ${PROJECT_SOURCE_DIR}/gt_dump/templates/chunks/arg_map.cpp.j2
+                        ${PROJECT_SOURCE_DIR}/gt_dump/templates/chunks/mss_ptrs.cpp.j2
+                        ${PROJECT_SOURCE_DIR}/gt_dump/templates/chunks/eval.cpp.j2
+                        ${PROJECT_SOURCE_DIR}/gt_dump/templates/chunks/launch_kernel.cpp.j2
+                        ${PROJECT_SOURCE_DIR}/gt_dump/templates/chunks/run_multistage.cpp.j2
+                        ${PROJECT_SOURCE_DIR}/gt_dump/templates/chunks/computation.cpp.j2
                         ${generated_file_source_path}
                         gt_dump_python
                         ${PROJECT_SOURCE_DIR}/gt_dump/proto/interface.proto
@@ -294,6 +315,6 @@ endif( COMPONENT_STENCIL_COMPOSITION )
 gt_use_dumped_data(vertical_advection_dycore_x86_block)
 gt_use_dumped_data(vertical_advection_dycore_cuda)
 gt_use_dumped_data(copy_stencil_x86_block)
-#gt_use_dumped_data(copy_stencil_cuda)
+gt_use_dumped_data(copy_stencil_cuda)
 gt_use_dumped_data(horizontal_diffusion_x86_block)
 
