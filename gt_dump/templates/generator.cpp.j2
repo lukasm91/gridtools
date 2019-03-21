@@ -1,5 +1,7 @@
-{%- include 'chunks/includes.cpp.j2' %}
-namespace gen_{{ context.name }} {
+// this code was generated
+
+{% include 'chunks/includes.cpp.j2' %}
+namespace gen_{{ context.name }}_{{ context.hash }} {
     {% filter indent(width=4) %}
     {%- include 'chunks/extent.cpp.j2' %}
     {%- include 'chunks/computation_info.cpp.j2' %}
@@ -12,4 +14,189 @@ namespace gen_{{ context.name }} {
     {%- include 'chunks/run_multistage.cpp.j2' %}
     {%- include 'chunks/computation.cpp.j2' %}
     {%- endfilter %}
-} // namespace
+
+    template<typename StorageInfo>
+    GT_META_DEFINE_ALIAS(make_stride_array_t, meta::id, (std::array<int, StorageInfo::layout_t::unmasked_length>));
+
+    template <typename Array>
+    GT_META_DEFINE_ALIAS(is_not_zero_dimensional,
+        meta::id,
+        (std::integral_constant<bool, (GT_META_CALL(gridtools::tuple_util::size, Array)::value > 0)>));
+
+    template <typename DataStore>
+    auto get_ptr(DataStore const &data_store) GT_AUTO_RETURN((gridtools::advanced::get_raw_pointer_of(
+        gridtools::make_target_view<gridtools::access_mode::read_only>(data_store))));
+
+    template <typename T>
+    struct AsIntegralConstants;
+    template <template <int...> typename M, int... Is>
+    struct AsIntegralConstants<M<Is...>> {
+        using type = std::tuple<std::integral_constant<int, Is>...>;
+    };
+
+    template <typename DataStore,
+        typename RetType = make_stride_array_t<typename DataStore::storage_info_t>,
+        typename LayoutMap = typename DataStore::storage_info_t::layout_t>
+    RetType extract_stride(DataStore const &data_store) {
+        auto strides = data_store.info().strides();
+
+        RetType ret;
+        for (int read_pos = 0, write_pos = 0; read_pos < LayoutMap::masked_length; ++read_pos)
+            if (LayoutMap::at(read_pos) != -1)
+                ret[write_pos++] = strides[read_pos];
+
+        return ret;
+    }
+
+
+    template <typename BoundData>
+    struct computation_ptrs ;
+    template <typename... BoundPlaceholders, typename... BoundDataStores>
+    struct computation_ptrs<std::tuple<arg_storage_pair<BoundPlaceholders, BoundDataStores>...>> {
+        using ptrs = std::tuple<typename BoundPlaceholders::data_store_t::data_t *...>;
+        using storage_infos = GT_META_CALL(meta::dedup, std::tuple<typename BoundPlaceholders::data_store_t::storage_info_t...>);
+        using stride_arrays = GT_META_CALL(meta::transform, (make_stride_array_t, storage_infos));
+        using non_zero_stride_arrays = GT_META_CALL(meta::filter, (is_not_zero_dimensional, stride_arrays));
+
+        using bound_arg_keys = GT_META_CALL(
+            meta::transform, (_impl::get_tag_of_plh_t, std::tuple<BoundPlaceholders...>));
+
+        ptrs ptrs_;
+        non_zero_stride_arrays strides_;
+
+        struct assign_arg_f {
+            ptrs& ptrs_;
+            non_zero_stride_arrays& strides_;
+
+            template <typename Placeholder,
+                typename Datastore,
+                typename StorageInfo = typename Placeholder::data_store_t::storage_info_t,
+                typename StrideArray = GT_META_CALL(make_stride_array_t, StorageInfo),
+                typename gridtools::enable_if_t<
+                    GT_META_CALL(!is_not_zero_dimensional, StrideArray)::value,
+                    int> = 0>
+            void operator()(gridtools::arg_storage_pair<Placeholder, Datastore>&& arg) const {
+                // global accessor
+            }
+            template <typename Placeholder,
+                typename Datastore,
+                typename StorageInfo = typename Placeholder::data_store_t::storage_info_t,
+                typename StrideArray = GT_META_CALL(make_stride_array_t, StorageInfo),
+                typename gridtools::enable_if_t<
+                    GT_META_CALL(is_not_zero_dimensional, StrideArray)::value,
+                    int> = 0,
+                typename PtrPosition = typename GT_META_CALL(meta::st_position, (std::tuple<BoundPlaceholders...>, Placeholder))::type,
+                typename SIPosition = typename GT_META_CALL(meta::st_position, (storage_infos, StorageInfo))::type>
+            void operator()(gridtools::arg_storage_pair<Placeholder, Datastore>&& arg) const {
+                // normal accessor
+                std::get<PtrPosition::value>(ptrs_) = get_ptr(arg.m_value);
+                std::get<SIPosition::value>(strides_) = extract_stride(arg.m_value);
+            }
+        };
+
+        void assign(std::tuple<arg_storage_pair<BoundPlaceholders, BoundDataStores>...>&& args) {
+            auto assign = gridtools::tuple_util::for_each(assign_arg_f{ptrs_, strides_});
+            assign(std::move(args));
+        }
+
+        template <uint_t ArgId,
+            typename ArgPosition = GT_META_CALL(gridtools::meta::st_position, (bound_arg_keys, std::integral_constant<uint_t, ArgId>)),
+            typename Placeholder = GT_META_CALL(gridtools::meta::at, (std::tuple<BoundPlaceholders...>, ArgPosition)),
+            typename StorageInfo = typename Placeholder::data_store_t::storage_info_t>
+        using si_position_t = GT_META_CALL(gridtools::meta::st_position, (storage_infos, StorageInfo));
+
+        template <uint_t ArgId>
+        using stride_t = GT_META_CALL(gridtools::meta::at, (stride_arrays, si_position_t<ArgId>));
+
+        template <uint_t ArgId>
+        stride_t<ArgId> get_stride() const {
+            return std::get<si_position_t<ArgId>::value>(strides_);
+        }
+    };
+
+} // namespace gen_{{ context.name }}_{{ context.hash }}
+
+namespace gridtools {
+    #define GT_DUMP_IDENTIFIER_{{ context.name }} {{ context.hash }}
+
+    template <typename Grid, typename... BoundPlaceholders, typename... BoundDataStores>
+    struct generated_computation<std::integral_constant<long int, {{ context.hash }}>,
+        Grid,
+        std::tuple<arg_storage_pair<BoundPlaceholders, BoundDataStores>...>> {
+
+        using bound_arg_storage_pair_tuple_t =
+            std::tuple<_impl::bound_arg_storage_pair<BoundPlaceholders, BoundDataStores>...>;
+
+        using bound_arg_keys = GT_META_CALL(
+            meta::transform, (_impl::get_tag_of_plh_t, std::tuple<BoundPlaceholders...>));
+
+        template <uint_t ArgId>
+        GT_META_DEFINE_ALIAS(is_static_bound_arg,
+            meta::st_contains, (bound_arg_keys, std::integral_constant<uint, ArgId>));
+
+        using StaticPtrsType = gen_{{ context.name }}_{{ context.hash }}::computation_ptrs<std::tuple<arg_storage_pair<BoundPlaceholders, BoundDataStores>...>>;
+
+        template <uint_t ArgId,
+            typename... T,
+            enable_if_t<GT_META_CALL(is_static_bound_arg, ArgId)::value, int> = 0,
+            typename PtrPosition = typename GT_META_CALL(
+                meta::st_position, (bound_arg_keys, std::integral_constant<uint_t, ArgId>))::type,
+            typename BoundArgPair =
+                typename std::tuple_element<PtrPosition::value, bound_arg_storage_pair_tuple_t>::type,
+            typename RetType = typename BoundArgPair::view_t::data_t>
+        RetType* get_arg(T &&...) const {
+            return std::get<PtrPosition::value>(ptrs_.ptrs_);
+        }
+
+        template <uint_t ArgId,
+            typename... Args,
+            typename... DataStores,
+            enable_if_t<!GT_META_CALL(is_static_bound_arg, ArgId)::value, int> = 0,
+            typename ArgKeys = GT_META_CALL(meta::transform, (_impl::get_tag_of_plh_t, std::tuple<Args...>)),
+            typename ArgPosition = GT_META_CALL(meta::st_position, (ArgKeys, std::integral_constant<uint_t, ArgId>))>
+        auto get_arg(arg_storage_pair<Args, DataStores> const &... srcs) const GT_AUTO_RETURN(
+            (gen_{{ context.name }}_{{ context.hash }}::get_ptr(std::get<ArgPosition::value>(std::make_tuple(srcs...)).m_value)));
+
+        template <uint_t ArgId,
+            typename... T,
+            enable_if_t<GT_META_CALL(is_static_bound_arg, ArgId)::value, int> = 0,
+            typename RetType = typename StaticPtrsType::template stride_t<ArgId>>
+        RetType get_stride(T &&...) const {
+            return ptrs_.template get_stride<ArgId>();
+        }
+
+        template <uint_t ArgId,
+            typename... Args,
+            typename... DataStores,
+            enable_if_t<!GT_META_CALL(is_static_bound_arg, ArgId)::value, int> = 0,
+            typename ArgKeys = GT_META_CALL(meta::transform, (_impl::get_tag_of_plh_t, std::tuple<Args...>)),
+            typename ArgPosition = GT_META_CALL(meta::st_position, (ArgKeys, std::integral_constant<uint_t, ArgId>))>
+        auto get_stride(arg_storage_pair<Args, DataStores> const &... srcs) const GT_AUTO_RETURN(
+            (gen_{{ context.name }}_{{ context.hash }}::extract_stride(std::get<ArgPosition::value>(std::make_tuple(srcs...)).m_value)));
+
+      public:
+        generated_computation(Grid const& grid, std::tuple<arg_storage_pair<BoundPlaceholders, BoundDataStores>...>&& storages)
+            : computation_(grid) {
+            ptrs_.assign(std::move(storages));
+        }
+
+        template <typename... Args, typename... DataStores>
+        void run(arg_storage_pair<Args, DataStores> const&... srcs) {
+            computation_.run(
+                {%- set comma = joiner(", ") -%}
+                {%- for kind_id, kind_info in context.kinds|dictsort() %}
+                  {{ comma() }} get_stride<{{ kind_info.args|first }}>(srcs...)
+                {%- endfor %}
+                {%- for arg_id, arg_info in context.args|dictsort() %}
+                  {{- comma() }} get_arg<{{ arg_id }}>(srcs...)
+                {%- endfor %});
+            std::cout << "run" << std::endl;
+        }
+        void reset_meter() {}
+        std::string print_meter() const { return ""; }
+
+      private:
+        gen_{{ context.name }}_{{ context.hash }}::generated_computation<Grid> computation_;
+        StaticPtrsType ptrs_;
+    };
+}

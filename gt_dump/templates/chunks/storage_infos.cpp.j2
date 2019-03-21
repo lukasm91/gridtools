@@ -4,26 +4,15 @@
 {%- for field_id, field_info in context.temporaries.items() %}
   class kind_tmp_{{ field_id }}_info {
     public:
-      kind_tmp_{{- field_id }}_info(const std::array<int, {{ field_info|kind_dimension }}>& strides) noexcept
+      {%- set comma = joiner() %}
+      kind_tmp_{{ field_id }}_info({%- if not field_info|masked(0) %}{{ comma() -}}int stride_i_block {%- endif -%}
+                                   {%- if not field_info|masked(1) %}{{ comma() -}}int stride_j_block {%- endif -%})
           {%- set comma = joiner_first(sep=", ", first=': ') %}
-          {%- set info_ns = namespace() %}
-          {%- set info_ns.index = 0 %}
-          {%- for i in range(field_info.layout|length) %}
-            {%- if not field_info|masked(i) and not field_info|unitstride(i) %}
-              {{- comma() }}stride_{{ i }}_(strides[{{ info_ns.index }}])
-            {% endif %}
-            {%- set info_ns.index = info_ns.index + 1 if not field_info|masked(i) else info_ns.index %}
-          {%- endfor -%}
+          {%- if not field_info|masked(0) %}{{ comma() -}}stride_i_block_(stride_i_block) {%- endif -%}
+          {%- if not field_info|masked(1) %}{{ comma() -}}stride_j_block_(stride_j_block) {%- endif -%}
       {
-          {%- set info_ns = namespace() %}
-          {%- set info_ns.index = 0 %}
-          {%- for i in range(field_info.layout|length) %}
-            {%- if field_info|unitstride(i) %}
-              assert(stride_{{ i }}_ == strides[{{ info_ns.index }}]);
-            {%- endif %}
-            {%- set info_ns.index = info_ns.index + 1 if not field_info|masked(i) else info_ns.index %}
-          {%- endfor -%}
       }
+
       kind_tmp_{{ field_id }}_info() = default;
 
       GT_FUNCTION int get_offset(int i, int j, int k) const noexcept {

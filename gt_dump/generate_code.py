@@ -296,6 +296,7 @@ context["kinds"] = {}
 for kind_id, kind_info in computation.fields.kinds.items():
     context["kinds"][kind_id] = {}
     context["kinds"][kind_id]["layout"] = list(kind_info.layout)
+    context["kinds"][kind_id]["args"] = []
 
 # args
 context["args"] = {}
@@ -305,6 +306,7 @@ for arg_id, arg_info in computation.fields.args.items():
         "type": arg_info.type,
         "readonly": False, # TODO
     }
+    context["kinds"][arg_info.kind]["args"].append(arg_id)
 
 context["temporaries"] = {}
 for field_id, field_info in computation.temporaries.items():
@@ -313,7 +315,8 @@ for field_id, field_info in computation.temporaries.items():
     context["temporaries"][field_id]["type"] = field_info.type
 
 context["multistages"] = multistages
-context["name"] = h.hexdigest()
+context["hash"] = int(h.hexdigest(), 16)
+context["name"] = sys.argv[1].split("__")[-1]
 
 pprint(context)
 
@@ -346,21 +349,6 @@ template = env.get_template("generator.cpp.j2")
 
 with open(sys.argv[2], "w") as out_f:
     print(template.render(context=context), end='', file=out_f)
-
-    stencil_name = sys.argv[1].split("__")[-1]
-    out = """
-        #define GT_DUMP_IDENTIFIER_{stencil_name} {stencil_hash}
-        // this code was generated
-        namespace gridtools {{
-            template <>
-            struct generated_computation<std::integral_constant<long int, {stencil_hash}>> {{
-                void run() {{ std::cout << "run" << std::endl; }}
-                void reset_meter() {{}}
-                std::string print_meter() const {{ return ""; }}
-            }};
-        }} // namespace gridtools
-        """.format(stencil_hash=str(int(h.hexdigest(), 16)), stencil_name=stencil_name)
-    print(out, end='', file=out_f)
 
 os.system("clang-format -i {}".format(sys.argv[2]))
 

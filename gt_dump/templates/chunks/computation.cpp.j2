@@ -42,16 +42,16 @@ generated_computation<Grid>::generated_computation(Grid const& grid)
       kind_tmp_{{ arg_id }}_ = {
           {%- if not arg_info|masked(0) %}
             {{- comma() -}}
-            i_padded_length
-            {{- '* j_padded_length' if not arg_info|masked(1) }}
-            {{- '* k_padded_length' if not arg_info|masked(2) }}
+            (int)i_padded_length
+            {{- '* (int)j_padded_length' if not arg_info|masked(1) }}
+            {{- '* (int)k_padded_length' if not arg_info|masked(2) }}
           {%- endif %}
           {%- if not arg_info|masked(1) %}
             {{- comma() -}}
-            {{- 'i_padded_length * ' if not arg_info|masked(0) }}
-            j_padded_length
-            {{- ' * k_padded_length ' if not arg_info|masked(2) }}
-            {{- ' * num_blocks_i' if not arg_info|masked(0) }}
+            {{- '(int)i_padded_length * ' if not arg_info|masked(0) }}
+            (int)j_padded_length
+            {{- ' * (int)k_padded_length ' if not arg_info|masked(2) }}
+            {{- ' * (int)num_blocks_i' if not arg_info|masked(0) }}
           {%- endif -%}
       };
     {%- endfor %}
@@ -118,7 +118,7 @@ void generated_computation<Grid>::run(
               {%- for arg_id, arg_info in multistage.temporaries.args.items() %}
                   {{- comma() }}kind_tmp_{{ arg_id }}_fields
               {%- endfor -%}};
-          run_{{ multistage.name }}(ptrs, grid_);
+          run_multistage_{{ multistage.id }}(ptrs, grid_);
 
       }
     {%- endfor %}

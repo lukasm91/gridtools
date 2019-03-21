@@ -49,15 +49,9 @@
                 {%- endfor %}
             }
 
-            GT_FUNCTION void increment_i(int const i) noexcept {
-                increment(si_.get_offset(i, 0, 0));
-            }
-            GT_FUNCTION void increment_j(int const j) noexcept {
-                increment(si_.get_offset(0, j, 0));
-            }
-            GT_FUNCTION void increment_k(int const k) noexcept {
-                increment(si_.get_offset(0, 0, k));
-            }
+            GT_FUNCTION void increment_i(int const i) noexcept { increment(si_.get_offset(i, 0, 0)); }
+            GT_FUNCTION void increment_j(int const j) noexcept { increment(si_.get_offset(0, j, 0)); }
+            GT_FUNCTION void increment_k(int const k) noexcept { increment(si_.get_offset(0, 0, k)); }
             GT_FUNCTION void initialize(int const nbx, int const nby, int const i, int const j, int const k) noexcept {
                 increment(si_.get_block_offset(nbx, nby));
                 increment(si_.get_offset(i, j, k));

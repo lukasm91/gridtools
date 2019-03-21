@@ -16,11 +16,40 @@
 
 namespace gridtools {
 
-    template <typename>
+    template <typename Id, typename Grid, typename ArgStoragePairs>
     struct generated_computation;
 
-    template <class Backend, class Id, class Grid, class Arg, class... Args, enable_if_t<is_grid<Grid>::value, int> = 0>
-    auto make_computation(Id &&, Grid const &grid, Arg &&arg, Args &&... args)
-        GT_AUTO_RETURN((generated_computation<Id>{}));
+    namespace _impl {
+        template <typename T>
+        struct get_tag;
+        template <uint_t I>
+        struct get_tag<_impl::arg_tag<I>> : std::integral_constant<uint_t, I> {};
+        template <typename T>
+        struct get_tag_of_plh;
+        template <class Tag, typename DataStore, typename Location, bool Temporary>
+        struct get_tag_of_plh<plh<Tag, DataStore, Location, Temporary>> : get_tag<Tag> {};
+        template <typename T>
+        struct is_temporary_plh;
+        template <class Tag, typename DataStore, typename Location, bool Temporary>
+        struct is_temporary_plh<plh<Tag, DataStore, Location, Temporary>> : std::integral_constant<bool, Temporary> {};
+
+        template <typename T>
+        using get_tag_of_plh_t = typename get_tag_of_plh<T>::type;
+    } // namespace _impl
+
+    template <class Backend,
+        class Id,
+        class Grid,
+        class Arg,
+        class... Args,
+        enable_if_t<is_grid<Grid>::value, int> = 0,
+        class ArgsPair = decltype(split_args<is_arg_storage_pair>(
+            std::forward<Arg>(std::declval<Arg>()), std::forward<Args>(std::declval<Args>())...)),
+        class ArgStoragePairs = GT_META_CALL(_impl::decay_elements, typename ArgsPair::first_type)>
+    generated_computation<Id, Grid, ArgStoragePairs> make_computation(
+        Id &&, Grid const &grid, Arg &&arg, Args &&... args) {
+        auto &&args_pair = split_args<is_arg_storage_pair>(std::forward<Arg>(arg), std::forward<Args>(args)...);
+        return {grid, std::move(args_pair.first)};
+    }
 
 } // namespace gridtools
