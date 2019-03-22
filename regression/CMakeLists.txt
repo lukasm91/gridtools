@@ -1,5 +1,5 @@
 set(GT_DUMP_DATA_FOLDER "/home/lukas/documents/work/gridtools4/build/regression/data")
-set(GT_DUMP_GENERATE_DATA OFF)
+set(GT_DUMP_GENERATE_DATA ON)
 
 function (gt_copy_target new_target old_target)
     set(CMAKE_PROPERTY_LIST
@@ -73,22 +73,13 @@ endfunction()
 
 function(gt_use_dumped_data target)
 
-    find_package(Protobuf REQUIRED)
-
-    if (TARGET gtgen_proto)
-    else()
-        add_library(gtgen_proto /home/lukas/documents/work/test/cpp_interface/interface.pb.cc)
-        target_include_directories(gtgen_proto PUBLIC /home/lukas/documents/work/test/cpp_interface/)
-        target_link_libraries(gtgen_proto ${Protobuf_LIBRARIES})
-    endif()
-
     target_compile_definitions(${target}  PRIVATE GT_DUMP_DATA_FOLDER=${GT_DUMP_DATA_FOLDER})
     target_include_directories(${target}  PUBLIC ../gt_dump)
     target_link_libraries(${target} stdc++fs)
 
     if (GT_DUMP_GENERATE_DATA)
         target_compile_definitions(${target} PRIVATE GT_DUMP_GENERATE_DATA)
-        target_link_libraries(${target} gtgen_proto)
+        target_link_libraries(${target} gt_dump_interface)
     else()
         get_target_property(target_sources ${target} SOURCES)
         set(new_sources)
