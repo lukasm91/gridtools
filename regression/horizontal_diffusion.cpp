@@ -25,8 +25,8 @@ struct lap_function {
 
     template <typename Evaluation>
     GT_FUNCTION static void apply(Evaluation eval) {
-        eval(out()) =
-            float_type{4} * eval(in()) - (eval(in(1, 0)) + eval(in(0, 1)) + eval(in(-1, 0)) + eval(in(0, -1)));
+        eval(out()) = eval(in(1, 0));
+        // float_type{4} * eval(in()) - (eval(in(1, 0)) + eval(in(0, 1)) + eval(in(-1, 0)) + eval(in(0, -1)));
     }
 };
 
@@ -39,10 +39,10 @@ struct flx_function {
 
     template <typename Evaluation>
     GT_FUNCTION static void apply(Evaluation eval) {
-        eval(out()) = eval(lap(1, 0)) - eval(lap(0, 0));
-        if (eval(out()) * (eval(in(1, 0, 0)) - eval(in(0, 0))) > 0) {
-            eval(out()) = 0.;
-        }
+        // eval(out()) = eval(lap(1, 0)) - eval(lap(0, 0));
+        // if (eval(out()) * (eval(in(1, 0, 0)) - eval(in(0, 0))) > 0) {
+        // eval(out()) = 0.;
+        // }
     }
 };
 
@@ -55,9 +55,9 @@ struct fly_function {
 
     template <typename Evaluation>
     GT_FUNCTION static void apply(Evaluation eval) {
-        eval(out()) = eval(lap(0, 1)) - eval(lap(0, 0));
-        if (eval(out()) * (eval(in(0, 1)) - eval(in(0, 0))) > 0)
-            eval(out()) = 0.;
+        // eval(out()) = eval(lap(0, 1)) - eval(lap(0, 0));
+        // if (eval(out()) * (eval(in(0, 1)) - eval(in(0, 0))) > 0)
+        // eval(out()) = 0.;
     }
 };
 
@@ -72,7 +72,7 @@ struct out_function {
 
     template <typename Evaluation>
     GT_FUNCTION static void apply(Evaluation eval) {
-        eval(out()) = eval(in()) - eval(coeff()) * (eval(flx()) - eval(flx(-1, 0)) + eval(fly()) - eval(fly(0, -1)));
+        // eval(out()) = eval(in()) - eval(coeff()) * (eval(flx()) - eval(flx(-1, 0)) + eval(fly()) - eval(fly(0, -1)));
     }
 };
 
@@ -104,6 +104,7 @@ TEST_F(horizontal_diffusion, test) {
             make_stage<out_function>(p_out, p_in, p_flx, p_fly, p_coeff)));
 
     comp.run();
+    out.clone_from_device();
     verify(make_storage(repo.out), out);
     benchmark(comp);
 }

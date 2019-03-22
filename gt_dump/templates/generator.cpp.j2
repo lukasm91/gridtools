@@ -180,6 +180,14 @@ namespace gridtools {
             typename RetType = typename get_bound_arg_result_type_helper<IsStaticBound::value, ArgId, BoundArgStoragePairs>::type>
         GT_META_DEFINE_ALIAS(get_bound_arg_result_type, meta::id, RetType);
     }
+
+    struct update_view_f {
+        template <typename BoundPlaceholder, typename BoundDataStore>
+        void operator()(_impl::bound_arg_storage_pair<BoundPlaceholder, BoundDataStore>& arg) const {
+            using Backend = gridtools::backend_traits_from_id<target::cuda>;
+            arg.template updated_view<Backend>();
+        }
+    };
     #endif
 
     template <typename Grid, typename... BoundPlaceholders, typename... BoundDataStores>
@@ -230,12 +238,14 @@ namespace gridtools {
 
       public:
         generated_computation(Grid const& grid, std::tuple<arg_storage_pair<BoundPlaceholders, BoundDataStores>...>&& storages)
-            : computation_(grid) {
+            : computation_(grid), storage_pairs_(storages) {
             ptrs_.assign(std::move(storages));
         }
 
         template <typename... Args, typename... DataStores>
         void run(arg_storage_pair<Args, DataStores> const&... srcs) {
+            tuple_util::for_each(update_view_f{}, std::make_tuple(srcs...));
+            tuple_util::for_each(update_view_f{}, storage_pairs_);
             computation_.run(
                 {%- set comma = joiner(", ") -%}
                 {%- for kind_id, kind_info in context.kinds|dictsort %}
@@ -251,5 +261,6 @@ namespace gridtools {
       private:
         gen_{{ context.name }}_{{ context.hash }}::generated_computation<Grid> computation_;
         StaticPtrsType ptrs_;
+        bound_arg_storage_pairs storage_pairs_; // this would not belong in here, but that's an ugly interface which is fine...
     };
 }

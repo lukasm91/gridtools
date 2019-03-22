@@ -15,7 +15,7 @@
       {%- if multistage.ij_caches|length > 0 %}
         struct ij_caches {
             {%- for ij_cache in multistage.ij_caches %}
-              {{ ij_cache.type }}* arg_{{ 'tmp_' if k_cache.temporary }}{{ ij_cache.id }}_ = nullptr;
+              {{ ij_cache.type }}* arg_{{ 'tmp_' if ij_cache.temporary }}{{ ij_cache.id }}_ = nullptr;
             {%- endfor %}
             GT_FUNCTION int get_offset(int i, int j, int k) const noexcept {
                 assert(k == 0);
@@ -251,7 +251,7 @@
         {%- endif %}
       {%- endfor %}
 
-      // resolve for not ij caches
+      // resolve for ij caches
       {%- for ij_cache in multistage["ij_caches"] %}
         GT_FUNCTION_DEVICE {{ ij_cache.type }} resolve(std::integral_constant<unsigned, {{ ij_cache.id }}>, gridtools::array<int, 3> const& offsets) const noexcept {
             return *(ij_caches_.arg_{{ 'tmp_' if ij_cache.temporary }}{{ ij_cache.id }}_ +
@@ -259,13 +259,13 @@
         }
         {%- if not ij_cache.readonly %}
           GT_FUNCTION_DEVICE {{ ij_cache.type }}& resolve(std::integral_constant<unsigned, {{ ij_cache.id }}>, gridtools::array<int, 3> const& offsets) noexcept {
-              return *(ij_caches_.{{ 'tmp_' if ij_cache.temporary }}{{ ij_cache.id }}_ +
+              return *(ij_caches_.arg_{{ 'tmp_' if ij_cache.temporary }}{{ ij_cache.id }}_ +
                        ij_caches_.get_offset(offsets[0], offsets[1], offsets[2]));
           }
         {%- endif %}
       {%- endfor %}
 
-      // resolve for not k caches
+      // resolve for k caches
       {%- for k_cache in multistage["k_caches"] %}
         GT_FUNCTION_DEVICE {{ k_cache.type }} resolve(std::integral_constant<unsigned, {{ k_cache.id }}>, gridtools::array<int, 3> const& offsets) const noexcept {
             static constexpr const int kcache_start = {{ k_cache.min_extent }};

@@ -53,7 +53,7 @@ namespace {
       ptrs.init_caches();
 
       {%- for ij_cache in multistage.ij_caches %}
-        {%- if index == 1 %}
+        {%- if loop.index == 1 %}
           static constexpr int ij_cache_i_size = gen::block_i_size +
                                                  -mss_info::max_stage_extent::iminus() +
                                                  mss_info::max_stage_extent::iplus();
