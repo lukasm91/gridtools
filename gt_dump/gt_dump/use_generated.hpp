@@ -3,6 +3,8 @@
 #include <gridtools/stencil-composition/accessor.hpp>
 #include <gridtools/stencil-composition/make_computation.hpp>
 
+#include "helpers.hpp"
+
 #ifndef GT_DUMP_GENERATED_CODE
 // clang-format off
 #define GT_DUMP_GENERATED_CODE(name) BOOST_PP_STRINGIZE(BOOST_PP_CAT(BOOST_PP_CAT(GT_DUMP_PREFIX, __), name))
@@ -19,23 +21,7 @@ namespace gridtools {
     template <typename Id, typename Grid, typename ArgStoragePairs>
     struct generated_computation;
 
-    namespace gt_gen_helpers {
-        template <typename T>
-        struct get_tag;
-        template <uint_t I>
-        struct get_tag<_impl::arg_tag<I>> : std::integral_constant<uint_t, I> {};
-        template <typename T>
-        struct get_tag_of_plh;
-        template <class Tag, typename DataStore, typename Location, bool Temporary>
-        struct get_tag_of_plh<plh<Tag, DataStore, Location, Temporary>> : get_tag<Tag> {};
-        template <typename T>
-        struct is_temporary_plh;
-        template <class Tag, typename DataStore, typename Location, bool Temporary>
-        struct is_temporary_plh<plh<Tag, DataStore, Location, Temporary>> : std::integral_constant<bool, Temporary> {};
-
-        template <typename T>
-        using get_tag_of_plh_t = typename get_tag_of_plh<T>::type;
-    } // namespace gt_gen_helpers
+    namespace gt_gen_helpers {} // namespace gt_gen_helpers
 
     template <class Backend,
         class Id,
