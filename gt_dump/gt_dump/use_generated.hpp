@@ -19,7 +19,7 @@ namespace gridtools {
     template <typename Id, typename Grid, typename ArgStoragePairs>
     struct generated_computation;
 
-    namespace _impl {
+    namespace gt_gen_helpers {
         template <typename T>
         struct get_tag;
         template <uint_t I>
@@ -35,7 +35,7 @@ namespace gridtools {
 
         template <typename T>
         using get_tag_of_plh_t = typename get_tag_of_plh<T>::type;
-    } // namespace _impl
+    } // namespace gt_gen_helpers
 
     template <class Backend,
         class Id,

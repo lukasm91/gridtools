@@ -42,7 +42,7 @@ namespace {
           jblock = mss_info::max_stage_extent::jminus() + (int)threadIdx.x / padded_boundary;
       }
 
-      {%- if multistage.direction == "forward" %}
+      {%- if multistage.direction != "backward" %}
         {%- set init_interval = multistage.intervals[0].interval[0] %}
       {%- else %}
         {%- set init_interval = multistage.intervals[-1].interval[1] %}
@@ -73,10 +73,10 @@ namespace {
         }
       {%- endfor %}
 
-      {%- for interval in (multistage.intervals if multistage.direction == "forward" else multistage.intervals|reverse) %}
+      {%- for interval in (multistage.intervals if multistage.direction != "backward" else multistage.intervals|reverse) %}
         for (int z = (int)grid.template value_at<gridtools::level<{{ interval.interval[0][0] }}, {{ interval.interval[0][1] }}, OffsetLimit>>();
-             z <= (int)grid.template value_at<gridtools::level<{{ interval.interval[1][0] }}, {{ interval.interval[1][1] }}, OffsetLimit>>();
-             ++z, ptrs.increment_k({{ '1' if multistage.direction == "forward" else '-1' }})) {
+             z < (int)grid.template value_at<gridtools::level<{{ interval.interval[1][0] }}, {{ interval.interval[1][1] }}, OffsetLimit>>();
+             ++z, ptrs.increment_k({{ '1' if multistage.direction != "backward" else '-1' }})) {
             ptrs.fill_caches();
 
             {%- for independent_stage_list in interval.stages %}

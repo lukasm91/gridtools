@@ -23,7 +23,7 @@
 
 namespace gridtools {
 
-    namespace _impl {
+    namespace gt_gen_helpers {
         template <typename T>
         struct get_tag;
         template <uint_t I>
@@ -246,7 +246,7 @@ namespace gridtools {
                     std::experimental::filesystem::path(filename).parent_path());
                 std::ofstream of(filename, std::ios::out | std::ios::binary | std::ios::trunc);
                 gt_gen::Computation computation;
-                for_each_type<Msses>(_impl::add_mss_f<typename Grid::axis_type>{&computation});
+                for_each_type<Msses>(add_mss_f<typename Grid::axis_type>{&computation});
                 computation.set_positional(IsStateful);
 
                 computation.SerializeToOstream(&of);
@@ -264,7 +264,7 @@ namespace gridtools {
             dump<Intermediate>(name);
             return std::move(intermediate);
         }
-    } // namespace _impl
+    } // namespace gt_gen_helpers
 
     /// generator for intermediate
     template <class Backend, class Grid, class Arg, class... Args, enable_if_t<is_grid<Grid>::value, int> = 0>
