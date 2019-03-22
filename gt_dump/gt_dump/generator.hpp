@@ -269,9 +269,9 @@ namespace gridtools {
     /// generator for intermediate
     template <class Backend, class Grid, class Arg, class... Args, enable_if_t<is_grid<Grid>::value, int> = 0>
     auto make_computation(std::string const &name, Grid const &grid, Arg &&arg, Args &&... args) GT_AUTO_RETURN(
-        dump_and_return(make_computation<Backend>(grid, std::forward<Arg>(arg), std::forward<Args>(args)...), name));
+        gt_gen_helpers::dump_and_return(make_computation<Backend>(grid, std::forward<Arg>(arg), std::forward<Args>(args)...), name));
     template <class Backend, class Grid, class Arg, class... Args, enable_if_t<is_grid<Grid>::value, int> = 0>
     auto make_computation(std::string &&name, Grid const &grid, Arg &&arg, Args &&... args) GT_AUTO_RETURN(
-        dump_and_return(make_computation<Backend>(grid, std::forward<Arg>(arg), std::forward<Args>(args)...), name));
+        gt_gen_helpers::dump_and_return(make_computation<Backend>(grid, std::forward<Arg>(arg), std::forward<Args>(args)...), name));
 
 } // namespace gridtools
