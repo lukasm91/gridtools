@@ -125,7 +125,7 @@ namespace gridtools {
     #define GT_DUMP_IDENTIFIER_{{ context.name }} {{ context.hash }}
 
     template <typename Grid, typename... BoundPlaceholders, typename... BoundDataStores>
-    struct generated_computation<std::integral_constant<long int, {{ context.hash }}>,
+    struct generated_computation<std::integral_constant<long int, GT_DUMP_IDENTIFIER_{{ context.name }}>,
         Grid,
         std::tuple<arg_storage_pair<BoundPlaceholders, BoundDataStores>...>> {
 
