@@ -73,6 +73,11 @@ message Multistage {
         BACKWARD = 1;
         PARALLEL = 2;
     }
+    enum ArgType {
+        NORMAL = 0;
+        TEMPORARY = 1;
+        GLOBAL = 2;
+    }
     Policy policy = 1;
     repeated KCache k_caches = 2;
     repeated IJCache ij_caches = 3;
@@ -80,7 +85,7 @@ message Multistage {
     message IndependentStage {
         message Arg {
             int32 id = 1;
-            bool temporary = 2;
+            ArgType arg_type = 2;
         }
         string name = 1;
         repeated Arg args = 2;

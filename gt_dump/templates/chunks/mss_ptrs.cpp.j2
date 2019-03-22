@@ -251,6 +251,13 @@
         {%- endif %}
       {%- endfor %}
 
+      // resolve for global arguments
+      {%- for arg_id, arg_info in multistage.globals.items() %}
+        GT_FUNCTION_DEVICE {{ arg_info.type }} resolve(std::integral_constant<unsigned, {{ arg_id }}>, gridtools::array<int, 3> const& offsets) const noexcept {
+          return {}; // TODO
+        }
+      {%- endfor %}
+
       // resolve for ij caches
       {%- for ij_cache in multistage["ij_caches"] %}
         GT_FUNCTION_DEVICE {{ ij_cache.type }} resolve(std::integral_constant<unsigned, {{ ij_cache.id }}>, gridtools::array<int, 3> const& offsets) const noexcept {

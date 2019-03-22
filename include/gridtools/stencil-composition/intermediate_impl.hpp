@@ -124,6 +124,10 @@ namespace gridtools {
 
         struct sync_f {
             template <class Arg, class DataStorage>
+            void operator()(arg_storage_pair<Arg, DataStorage> const &obj) const {
+                obj.m_value.sync();
+            }
+            template <class Arg, class DataStorage>
             void operator()(bound_arg_storage_pair<Arg, DataStorage> const &obj) const {
                 obj.m_data_storage.sync();
             }

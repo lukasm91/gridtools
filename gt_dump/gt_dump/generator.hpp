@@ -38,18 +38,17 @@ namespace gridtools {
         struct is_temporary_plh<plh<Tag, DataStore, Location, Temporary>> : std::integral_constant<bool, Temporary> {};
 
         struct add_param_f {
-            gt_gen::Computation *computation;
-            const std::string stage_name;
+            gt_gen::Stage& stage;
 
             template <uint_t ID>
             void operator()(global_accessor<ID>) const {
-                auto accessor = (*computation->mutable_stages())[stage_name].add_accessors();
+                auto accessor = stage.add_accessors();
 
                 accessor->mutable_global_accessor()->set_id(ID);
             }
             template <uint_t ID, intent Intent, typename Extent, ushort_t Dimension>
             void operator()(accessor<ID, Intent, Extent, Dimension>) const {
-                auto accessor = (*computation->mutable_stages())[stage_name].add_accessors();
+                auto accessor = stage.add_accessors();
 
                 accessor->mutable_normal_accessor()->set_id(ID);
                 accessor->mutable_normal_accessor()->set_intent(Intent == intent::inout
@@ -77,12 +76,15 @@ namespace gridtools {
                 if (layout_map::unmasked_length == 0) {
                     (*computation->mutable_global_params())[get_tag<Tag>::value].set_type(
                         boost::core::demangle(typeid(typename DataStoreType::data_t).name()));
+                    auto arg = stage->add_args();
+                    arg->set_id(get_tag<Tag>::value);
+                    arg->set_arg_type(gt_gen::Multistage::GLOBAL);
                     return;
                 }
 
                 auto arg = stage->add_args();
                 arg->set_id(get_tag<Tag>::value);
-                arg->set_temporary(is_temporary_plh<plh>::value);
+                arg->set_arg_type(Temporary ? gt_gen::Multistage::TEMPORARY : gt_gen::Multistage::NORMAL);
 
                 if (Temporary) {
                     if (not computation->mutable_temporaries()->count(get_tag<Tag>::value)) {
@@ -141,13 +143,13 @@ namespace gridtools {
                 (GT_META_CALL(meta::transform, (find_esf_interval<EsfFunction, Axis>::template apply, indices_t))));
         };
         struct add_interval_f {
-            gt_gen::Computation *computation;
-            const std::string stage_name;
+            gt_gen::Stage& stage;
 
             void operator()(int) const {}
             template <typename IntervalPair>
             void operator()(IntervalPair) const {
-                auto interval = (*computation->mutable_stages())[stage_name].add_intervals();
+
+                auto interval = stage.add_intervals();
                 interval->mutable_interval()->mutable_begin()->set_splitter(
                     IntervalPair::first_type::FromLevel::splitter);
                 interval->mutable_interval()->mutable_begin()->set_offset(IntervalPair::first_type::FromLevel::offset);
@@ -172,11 +174,14 @@ namespace gridtools {
                 independent_stage->set_name(stage_name);
                 for_each<typename Esf::args_t>(add_arg_f{independent_stage, computation});
 
+                gt_gen::Stage stage;
                 for_each<typename find_intervals<typename Esf::esf_function, Axis>::type>(
-                    add_interval_f{computation, stage_name});
+                    add_interval_f{stage});
 
                 for_each<copy_into_variadic<typename Esf::esf_function::param_list, std::tuple<>>>(
-                    add_param_f{computation, stage_name});
+                    add_param_f{stage});
+
+                computation->mutable_stages()->insert({stage_name, stage});
             }
         };
         template <typename Axis>

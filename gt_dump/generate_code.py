@@ -82,6 +82,7 @@ h = hashlib.blake2b(sys.argv[1].encode('utf-8'), digest_size=7)
 computation = interface_pb2.Computation()
 with open(in_file, "rb") as f:
     computation.ParseFromString(f.read())
+#  print(MessageToJson(computation, including_default_value_fields=True))
 
 mss1 = computation.multistages[0]
 
@@ -115,8 +116,8 @@ for mss in reversed(computation.multistages):
                 if accessor.HasField("normal_accessor") \
                     and accessor.normal_accessor.intent == interface_pb2.NormalAccessor.READ_WRITE:
 
-                    arg_extent = arg_extents[(arg.id, arg.temporary)] \
-                            if (arg.id, arg.temporary) in arg_extents else (0, 0, 0, 0)
+                    arg_extent = arg_extents[(arg.id, arg.arg_type)] \
+                            if (arg.id, arg.arg_type) in arg_extents else (0, 0, 0, 0)
 
                     stage_extent = max_extent(stage_extent, arg_extent)
             ds_data.append(stage_extent)
@@ -129,9 +130,9 @@ for mss in reversed(computation.multistages):
                         accessor.normal_accessor.extent.jminus,
                         accessor.normal_accessor.extent.jplus))
 
-                    new_arg_extents[(arg.id, arg.temporary)] = \
-                        max_extent(stage_arg_extent, new_arg_extents[(arg.id, arg.temporary)]) \
-                            if (arg.id, arg.temporary) in new_arg_extents else stage_arg_extent
+                    new_arg_extents[(arg.id, arg.arg_type)] = \
+                        max_extent(stage_arg_extent, new_arg_extents[(arg.id, arg.arg_type)]) \
+                            if (arg.id, arg.arg_type) in new_arg_extents else stage_arg_extent
 
         arg_extents = merge_dicts(max_extent, new_arg_extents, arg_extents)
 
@@ -187,15 +188,21 @@ for mss_id, (mss, mss_stage_analysis) in enumerate(zip(computation.multistages, 
             for arg, accessor in zip(stage_ref.args, stage.accessors):
                 accessor_id = accessor.normal_accessor.id if accessor.HasField("normal_accessor") else \
                     accessor.global_accessor.id
-                s_data["argmap"].append({"arg": (arg.temporary, arg.id), "accessor": accessor_id})
+                if arg.arg_type == interface_pb2.Multistage.NORMAL:
+                    arg_type = "normal"
+                elif arg.arg_type == interface_pb2.Multistage.GLOBAL:
+                    arg_type = "global"
+                else:
+                    arg_type = "temporary"
+                s_data["argmap"].append({"arg": (arg_type, arg.id), "accessor": accessor_id})
 
                 if accessor.HasField("normal_accessor"):
-                    if not (arg.temporary, arg.id) in k_extents:
-                        k_extents[(arg.temporary, arg.id)] = (accessor.normal_accessor.extent.kminus,
+                    if not (arg.arg_type, arg.id) in k_extents:
+                        k_extents[(arg.arg_type, arg.id)] = (accessor.normal_accessor.extent.kminus,
                             accessor.normal_accessor.extent.kplus)
                     else:
-                        old = k_extents[(arg.temporary, arg.id)]
-                        k_extents[(arg.temporary, arg.id)] = (
+                        old = k_extents[(arg.arg_type, arg.id)]
+                        k_extents[(arg.arg_type, arg.id)] = (
                             min(old[0], accessor.normal_accessor.extent.kminus),
                             max(old[1], accessor.normal_accessor.extent.kplus))
 
@@ -212,12 +219,13 @@ for mss_id, (mss, mss_stage_analysis) in enumerate(zip(computation.multistages, 
     mss_data["direction"] = "forward" if mss.policy == interface_pb2.Multistage.FORWARD else "backward" if mss.policy == interface_pb2.Multistage.BACKWARD else "parallel"
     mss_data["temporaries"] = {}
     mss_data["temporaries"]["args"] = {}
+    mss_data["globals"] = {}
     args = set()
     for d in mss.dependent_stages:
         for stage_ref in d.independent_stages:
             stage = computation.stages[stage_ref.name]
             for arg_ref, accessor in zip(stage_ref.args, stage.accessors):
-                if arg_ref.temporary:
+                if arg_ref.arg_type == interface_pb2.Multistage.TEMPORARY:
                     if not arg_ref.id in mss_data["temporaries"]["args"]:
                         mss_data["temporaries"]["args"][arg_ref.id] = {
                             "type": computation.temporaries[arg_ref.id].type
@@ -229,7 +237,7 @@ for mss_id, (mss, mss_stage_analysis) in enumerate(zip(computation.multistages, 
                         mss_data["temporaries"]["args"][arg_ref.id]["readonly"] = \
                             (accessor.normal_accessor.intent == interface_pb2.NormalAccessor.READ_ONLY)
 
-                elif accessor.HasField("normal_accessor"):
+                elif arg_ref.arg_type == interface_pb2.Multistage.NORMAL:
                     arg = computation.fields.args[arg_ref.id]
                     kind = computation.fields.kinds[arg.kind]
 
@@ -246,9 +254,14 @@ for mss_id, (mss, mss_stage_analysis) in enumerate(zip(computation.multistages, 
 
                         mss_data["kinds"][arg.kind]["args"][arg_ref.id]["readonly"] = \
                             (accessor.normal_accessor.intent == interface_pb2.NormalAccessor.READ_ONLY)
+                else:
+                    arg = computation.global_params[arg_ref.id]
+                    mss_data["globals"][arg_ref.id] = {
+                        "type": arg.type
+                    }
 
 
-            args = args | set([(arg.temporary, arg.id) for arg in stage_ref.args])
+            args = args | set([(arg.arg_type, arg.id) for arg in stage_ref.args])
 
     mss_data["k_caches"] = []
     for k_cache in mss.k_caches:
