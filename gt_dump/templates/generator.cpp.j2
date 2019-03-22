@@ -254,6 +254,8 @@ namespace gridtools {
                 {%- for arg_id, arg_info in context.args|dictsort() %}
                   {{- comma() }} get_arg<{{ arg_id }}>(srcs...)
                 {%- endfor %});
+            tuple_util::for_each(_impl::sync_f{}, std::make_tuple(srcs...));
+            tuple_util::for_each(_impl::sync_f{}, storage_pairs_);
         }
         void reset_meter() {}
         std::string print_meter() const { return ""; }
