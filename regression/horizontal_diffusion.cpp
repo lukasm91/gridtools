@@ -104,7 +104,6 @@ TEST_F(horizontal_diffusion, test) {
             make_stage<out_function>(p_out, p_in, p_flx, p_fly, p_coeff)));
 
     comp.run();
-    out.clone_from_device();
     verify(make_storage(repo.out), out);
     benchmark(comp);
 }

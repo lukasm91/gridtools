@@ -42,7 +42,6 @@ TEST_F(copy_stencil, test) {
         make_multistage(execute::parallel(), make_stage<copy_functor>(p_0, p_1)));
 
     comp.run();
-    out.clone_from_device();
     verify(in, out);
     benchmark(comp);
 }
@@ -53,6 +52,5 @@ TEST_F(copy_stencil, with_extents) {
         p_1 = out,
         make_multistage(execute::parallel(), make_stage_with_extent<copy_functor, extent<>>(p_0, p_1)))
         .run();
-    out.clone_from_device();
     verify(in, out);
 }
