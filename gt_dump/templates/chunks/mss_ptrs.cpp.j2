@@ -57,6 +57,7 @@
                 increment(si_.get_offset(i, j, k));
             }
         } kind_{{ kind_id }}_fields_;
+      {%- endfor %}
 
       {%- for arg_id, arg_info in multistage.temporaries.args.items() %}
         struct kind_tmp_{{ arg_id }}_fields {
@@ -79,8 +80,6 @@
                 increment(si_.get_offset(i, j, k));
             }
         } kind_tmp_{{ arg_id }}_fields_;
-      {%- endfor %}
-
       {%- endfor %}
 
       void check() const noexcept {
