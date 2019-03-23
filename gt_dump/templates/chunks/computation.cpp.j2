@@ -15,7 +15,7 @@ struct generated_computation {
     void run(
         {%- set comma = joiner(", ") -%}
         {%- for kind_id, kind_info in context.kinds|dictsort() %}
-          {{- comma() }} const std::array<int, {{ kind_info.layout|reject("equalto", -1)|list|length }}>& strides_{{ kind_id }}
+          {{- comma() }} const gridtools::array<int, {{ kind_info.layout|reject("equalto", -1)|list|length }}>& strides_{{ kind_id }}
         {%- endfor %}
         {%- for arg_id, arg_info in context.args|dictsort() %}
             {{- comma() }} {{- arg_info.type }}{{ ' const' if arg_info.read_only }} *ptr_{{ arg_id }}
@@ -88,7 +88,7 @@ template<typename Grid>
 void generated_computation<Grid>::run(
         {%- set comma = joiner(", ") -%}
         {%- for kind_id, kind_info in context.kinds|dictsort() %}
-          {{- comma() }} const std::array<int, {{ kind_info.layout|reject("equalto", -1)|list|length }}>& strides_{{ kind_id }}
+          {{- comma() }} const gridtools::array<int, {{ kind_info.layout|reject("equalto", -1)|list|length }}>& strides_{{ kind_id }}
         {%- endfor %}
         {%- for arg_id, arg_info in context.args|dictsort() %}
           {{- comma() }} {{ arg_info.type }}{{ ' const' if arg_info.read_only }} *ptr_{{ arg_id }}

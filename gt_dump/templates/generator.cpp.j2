@@ -16,13 +16,8 @@ namespace gen_{{ context.name }}_{{ context.hash }} {
     {%- include 'chunks/computation.cpp.j2' %}
     {%- endfilter %}
 
-    template<typename StorageInfo>
-    GT_META_DEFINE_ALIAS(make_stride_array_t, meta::id, (std::array<int, StorageInfo::layout_t::unmasked_length>));
-
-    template <typename Array>
-    GT_META_DEFINE_ALIAS(is_not_zero_dimensional,
-        meta::id,
-        (std::integral_constant<bool, (GT_META_CALL(gridtools::tuple_util::size, Array)::value > 0)>));
+    template <typename StorageInfo>
+    GT_META_DEFINE_ALIAS(make_stride_array_t, meta::id, (gridtools::array<int, StorageInfo::layout_t::unmasked_length>));
 
     template <typename DataStore>
     auto get_ptr(DataStore const &data_store) GT_AUTO_RETURN((gridtools::advanced::get_raw_pointer_of(
@@ -49,21 +44,20 @@ namespace gen_{{ context.name }}_{{ context.hash }} {
         return ret;
     }
 
-
     template <typename BoundData>
     struct computation_ptrs ;
     template <typename... BoundPlaceholders, typename... BoundDataStores>
     struct computation_ptrs<std::tuple<arg_storage_pair<BoundPlaceholders, BoundDataStores>...>> {
         using ptrs = std::tuple<typename BoundPlaceholders::data_store_t::data_t *...>;
-        using storage_infos = GT_META_CALL(meta::dedup, std::tuple<typename BoundPlaceholders::data_store_t::storage_info_t...>);
+        using storage_infos = GT_META_CALL(
+            meta::dedup, std::tuple<typename BoundPlaceholders::data_store_t::storage_info_t...>);
         using stride_arrays = GT_META_CALL(meta::transform, (make_stride_array_t, storage_infos));
-        using non_zero_stride_arrays = GT_META_CALL(meta::filter, (is_not_zero_dimensional, stride_arrays));
 
         using bound_arg_keys = GT_META_CALL(
             meta::transform, (gt_gen_helpers::get_tag_of_plh_t, std::tuple<BoundPlaceholders...>));
 
         ptrs ptrs_;
-        non_zero_stride_arrays strides_;
+        stride_arrays strides_;
 
         struct assign_arg_f {
             ptrs& ptrs_;
@@ -77,25 +71,12 @@ namespace gen_{{ context.name }}_{{ context.hash }} {
             }
         };
         struct assign_stride_f {
-            non_zero_stride_arrays& strides_;
+            stride_arrays& strides_;
 
             template <typename Placeholder,
                 typename Datastore,
                 typename StorageInfo = typename Placeholder::data_store_t::storage_info_t,
                 typename StrideArray = GT_META_CALL(make_stride_array_t, StorageInfo),
-                typename gridtools::enable_if_t<
-                    GT_META_CALL(!is_not_zero_dimensional, StrideArray)::value,
-                    int> = 0>
-            void operator()(gridtools::arg_storage_pair<Placeholder, Datastore>&& arg) const {
-                // global accessor
-            }
-            template <typename Placeholder,
-                typename Datastore,
-                typename StorageInfo = typename Placeholder::data_store_t::storage_info_t,
-                typename StrideArray = GT_META_CALL(make_stride_array_t, StorageInfo),
-                typename gridtools::enable_if_t<
-                    GT_META_CALL(is_not_zero_dimensional, StrideArray)::value,
-                    int> = 0,
                 typename SIPosition = typename GT_META_CALL(meta::st_position, (storage_infos, StorageInfo))::type>
             void operator()(gridtools::arg_storage_pair<Placeholder, Datastore>&& arg) const {
                 // normal accessor

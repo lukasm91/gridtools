@@ -44,7 +44,19 @@ namespace gridtools {
             void operator()(global_accessor<ID>) const {
                 auto accessor = stage.add_accessors();
 
-                accessor->mutable_global_accessor()->set_id(ID);
+                accessor->mutable_normal_accessor()->set_id(ID);
+                accessor->mutable_normal_accessor()->set_intent(gt_gen::NormalAccessor_Intent_READ_ONLY);
+                accessor->mutable_normal_accessor()->set_dimension(3);
+
+                gt_gen::Extent *extent = accessor->mutable_normal_accessor()->mutable_extent();
+                extent->set_iminus(0);
+                extent->set_iplus(0);
+                extent->set_jminus(0);
+                extent->set_jplus(0);
+                extent->set_kminus(0);
+                extent->set_kplus(0);
+
+                // accessor->mutable_global_accessor()->set_id(ID);
             }
             template <uint_t ID, intent Intent, typename Extent, ushort_t Dimension>
             void operator()(accessor<ID, Intent, Extent, Dimension>) const {
@@ -73,6 +85,7 @@ namespace gridtools {
                 using plh = plh<Tag, DataStoreType, LocationType, Temporary>;
 
                 using layout_map = typename DataStoreType::storage_info_t::layout_t;
+                /*
                 if (layout_map::unmasked_length == 0) {
                     (*computation->mutable_global_params())[get_tag<Tag>::value].set_type(
                         boost::core::demangle(typeid(typename DataStoreType::data_t).name()));
@@ -81,6 +94,7 @@ namespace gridtools {
                     arg->set_arg_type(gt_gen::Multistage::GLOBAL);
                     return;
                 }
+                */
 
                 auto arg = stage->add_args();
                 arg->set_id(get_tag<Tag>::value);

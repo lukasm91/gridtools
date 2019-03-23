@@ -60,7 +60,7 @@
 {%- for kind_id, kind_info in context.kinds.items() %}
   class kind_{{ kind_id }}_info {
     public:
-      kind_{{- kind_id }}_info(const std::array<int, {{ kind_info|kind_dimension }}>& strides) noexcept
+      kind_{{- kind_id }}_info(const gridtools::array<int, {{ kind_info|kind_dimension }}>& strides) noexcept
           {%- set comma = joiner_first(sep=", ", first=': ') %}
           {%- set info_ns = namespace() %}
           {%- set info_ns.index = 0 %}
