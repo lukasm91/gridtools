@@ -251,7 +251,8 @@ namespace gridtools {
                     std::experimental::filesystem::path(filename).parent_path());
                 std::ofstream of(filename, std::ios::out | std::ios::binary | std::ios::trunc);
                 gt_gen::Computation computation;
-                for_each_type<Msses>(add_mss_f<typename Grid::axis_type>{&computation});
+                // the default axis is exclusive while all other intervals are inclusive -> modify
+                for_each_type<Msses>(add_mss_f<typename Grid::axis_type::template modify<0, -1>>{&computation});
                 computation.set_positional(IsStateful);
 
                 computation.SerializeToOstream(&of);
