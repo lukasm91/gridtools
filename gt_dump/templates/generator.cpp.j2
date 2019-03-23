@@ -67,6 +67,16 @@ namespace gen_{{ context.name }}_{{ context.hash }} {
 
         struct assign_arg_f {
             ptrs& ptrs_;
+
+            template <typename Placeholder,
+                typename Datastore,
+                typename PtrPosition = typename GT_META_CALL(meta::st_position, (std::tuple<BoundPlaceholders...>, Placeholder))::type>
+            void operator()(gridtools::arg_storage_pair<Placeholder, Datastore>&& arg) const {
+                // normal accessor
+                std::get<PtrPosition::value>(ptrs_) = get_ptr(arg.m_value);
+            }
+        };
+        struct assign_stride_f {
             non_zero_stride_arrays& strides_;
 
             template <typename Placeholder,
@@ -86,18 +96,19 @@ namespace gen_{{ context.name }}_{{ context.hash }} {
                 typename gridtools::enable_if_t<
                     GT_META_CALL(is_not_zero_dimensional, StrideArray)::value,
                     int> = 0,
-                typename PtrPosition = typename GT_META_CALL(meta::st_position, (std::tuple<BoundPlaceholders...>, Placeholder))::type,
                 typename SIPosition = typename GT_META_CALL(meta::st_position, (storage_infos, StorageInfo))::type>
             void operator()(gridtools::arg_storage_pair<Placeholder, Datastore>&& arg) const {
                 // normal accessor
-                std::get<PtrPosition::value>(ptrs_) = get_ptr(arg.m_value);
                 std::get<SIPosition::value>(strides_) = extract_stride(arg.m_value);
             }
         };
 
         void assign(std::tuple<arg_storage_pair<BoundPlaceholders, BoundDataStores>...>&& args) {
-            auto assign = gridtools::tuple_util::for_each(assign_arg_f{ptrs_, strides_});
-            assign(std::move(args));
+            auto assign_args = gridtools::tuple_util::for_each(assign_arg_f{ptrs_});
+            assign_args(std::move(args));
+
+            auto assign_strides = gridtools::tuple_util::for_each(assign_stride_f{strides_});
+            assign_strides(std::move(args));
         }
 
         template <uint_t ArgId,
@@ -154,20 +165,19 @@ namespace gridtools {
             (gen_{{ context.name }}_{{ context.hash }}::get_ptr(std::get<ArgPosition::value>(std::make_tuple(srcs...)).m_value)));
 
         template <uint_t ArgId,
+            typename Ptrs,
             typename... T,
-            enable_if_t<GT_META_CALL(gt_gen_helpers::is_static_bound_arg, (ArgId, bound_arg_storage_pairs))::value, int> = 0,
-            typename RetType = typename StaticPtrsType::template stride_t<ArgId>>
-        RetType get_stride(T &&...) const {
-            return ptrs_.template get_stride<ArgId>();
-        }
+            enable_if_t<GT_META_CALL(gt_gen_helpers::is_static_bound_arg, (ArgId, bound_arg_storage_pairs))::value, int> = 0>
+        auto get_stride(Ptrs &&ptrs, T &&...) const GT_AUTO_RETURN(ptrs.template get_stride<ArgId>());
 
         template <uint_t ArgId,
+            typename Ptrs,
             typename... Args,
             typename... DataStores,
             enable_if_t<!GT_META_CALL(gt_gen_helpers::is_static_bound_arg, (ArgId, bound_arg_storage_pairs))::value, int> = 0,
             typename ArgKeys = GT_META_CALL(meta::transform, (gt_gen_helpers::get_tag_of_plh_t, std::tuple<Args...>)),
             typename ArgPosition = GT_META_CALL(meta::st_position, (ArgKeys, std::integral_constant<uint_t, ArgId>))>
-        auto get_stride(arg_storage_pair<Args, DataStores> const &... srcs) const GT_AUTO_RETURN(
+        auto get_stride(Ptrs &&, arg_storage_pair<Args, DataStores> const &... srcs) const GT_AUTO_RETURN(
             (gen_{{ context.name }}_{{ context.hash }}::extract_stride(std::get<ArgPosition::value>(std::make_tuple(srcs...)).m_value)));
 
       public:
@@ -184,7 +194,7 @@ namespace gridtools {
             computation_.run(
                 {%- set comma = joiner(", ") -%}
                 {%- for kind_id, kind_info in context.kinds|dictsort %}
-                  {{ comma() }} get_stride<{{ kind_info.args|first }}>(srcs...)
+                  {{ comma() }} get_stride<{{ kind_info.args|first }}>(ptrs_, srcs...)
                 {%- endfor %}
                 {%- for arg_id, arg_info in context.args|dictsort() %}
                   {{- comma() }} get_arg<{{ arg_id }}>(srcs...)

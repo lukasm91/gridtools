@@ -1,5 +1,5 @@
 set(GT_DUMP_DATA_FOLDER "/home/lukas/documents/work/gridtools4/build/regression/data")
-set(GT_DUMP_GENERATE_DATA ON)
+set(GT_DUMP_GENERATE_DATA OFF)
 
 function (gt_copy_target new_target old_target)
     set(CMAKE_PROPERTY_LIST
