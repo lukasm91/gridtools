@@ -28,23 +28,23 @@
         } ij_caches_;
       {%- endif %}
 
-      {%- for kind_id, kind_info in multistage["kinds"].items() %}
+      {%- for kind_id, kind_info in multistage["kinds"]|dictsort %}
         struct kind_{{ kind_id }}_fields {
             kind_{{ kind_id }}_fields(kind_{{ kind_id }}_info const& si) noexcept : si_(si) {}
             kind_{{ kind_id }}_info si_;
 
-            {%- for arg_id, arg_info in kind_info.args.items() %}
+            {%- for arg_id, arg_info in kind_info.args|dictsort %}
               {{ arg_info.type }}{{ ' const' if arg_info.readonly }}* ptr_{{ arg_id }}_ = nullptr;
             {%- endfor %}
 
             void check() const noexcept {
-                {%- for arg_id, arg_info in kind_info.args.items() %}
+                {%- for arg_id, arg_info in kind_info.args|dictsort %}
                   assert(ptr_{{ arg_id }}_ != nullptr);
                 {%- endfor %}
             }
 
             GT_FUNCTION void increment(int const offset) noexcept {
-                {%- for arg_id, arg_info in kind_info.args.items() %}
+                {%- for arg_id, arg_info in kind_info.args|dictsort %}
                   ptr_{{ arg_id }}_ += offset;
                 {%- endfor %}
             }
@@ -59,7 +59,7 @@
         } kind_{{ kind_id }}_fields_;
       {%- endfor %}
 
-      {%- for arg_id, arg_info in multistage.temporaries.args.items() %}
+      {%- for arg_id, arg_info in multistage.temporaries.args|dictsort %}
         struct kind_tmp_{{ arg_id }}_fields {
             kind_tmp_{{ arg_id }}_fields(kind_tmp_{{ arg_id }}_info const& si) noexcept : si_(si) {}
             kind_tmp_{{ arg_id }}_info si_;
@@ -83,23 +83,23 @@
       {%- endfor %}
 
       void check() const noexcept {
-          {%- for kind_id, kind_info in multistage["kinds"].items() %}
+          {%- for kind_id, kind_info in multistage["kinds"]|dictsort %}
             kind_{{ kind_id }}_fields_.check();
           {%- endfor %}
       }
 
       GT_FUNCTION void increment_i(int const i = 1) noexcept {
-          {%- for kind_id, kind_info in multistage["kinds"].items() %}
+          {%- for kind_id, kind_info in multistage["kinds"]|dictsort %}
             kind_{{ kind_id }}_fields_.increment_i(i);
           {%- endfor %}
       }
       GT_FUNCTION void increment_j(int const j = 1) noexcept {
-          {%- for kind_id, kind_info in multistage["kinds"].items() %}
+          {%- for kind_id, kind_info in multistage["kinds"]|dictsort %}
             kind_{{ kind_id }}_fields_.increment_j(j);
           {%- endfor %}
       }
       GT_FUNCTION void increment_k(int const k = 1) noexcept {
-          {%- for kind_id, kind_info in multistage["kinds"].items() %}
+          {%- for kind_id, kind_info in multistage["kinds"]|dictsort %}
             kind_{{ kind_id }}_fields_.increment_k(k);
           {%- endfor %}
       }
@@ -112,7 +112,7 @@
       template <typename Grid>
       GT_FUNCTION void initialize(const Grid& grid, int const iblock, int const jblock, int const k_pos) {
           // move to block / thread
-          {%- for kind_id, kind_info in multistage["kinds"].items() %}
+          {%- for kind_id, kind_info in multistage["kinds"]|dictsort %}
             kind_{{ kind_id }}_fields_.initialize(blockIdx.x, blockIdx.y, iblock, jblock, k_pos);
           {%- endfor %}
       }
@@ -215,8 +215,8 @@
       }
 
       // resolve for not cached arguments (not temporaries)
-      {%- for kind_id, kind_info in multistage.kinds.items() %}
-        {%- for arg_id, arg_info in kind_info.args.items() %}
+      {%- for kind_id, kind_info in multistage.kinds|dictsort %}
+        {%- for arg_id, arg_info in kind_info.args|dictsort %}
           {%- if not "cached" in arg_info %}
             GT_FUNCTION_DEVICE {{ arg_info.type }} resolve(std::integral_constant<unsigned, {{ arg_id }}>, gridtools::array<int, 3> const& offsets) const noexcept {
               return {{ '__ldg' if arg_info.readonly else '*' -}}
@@ -234,7 +234,7 @@
       {%- endfor %}
 
       // resolve for not cached arguments (temporaries)
-      {%- for arg_id, arg_info in multistage.temporaries.args.items() %}
+      {%- for arg_id, arg_info in multistage.temporaries.args|dictsort %}
         {%- if not "cached" in arg_info %}
           GT_FUNCTION_DEVICE {{ arg_info.type }} resolve(std::integral_constant<unsigned, {{ arg_id }}>, gridtools::array<int, 3> const& offsets) const noexcept {
             return {{ '__ldg' if arg_info.readonly else '*' -}}
@@ -251,7 +251,7 @@
       {%- endfor %}
 
       // resolve for global arguments
-      {%- for arg_id, arg_info in multistage.globals.items() %}
+      {%- for arg_id, arg_info in multistage.globals|dictsort %}
         GT_FUNCTION_DEVICE {{ arg_info.type }} resolve(std::integral_constant<unsigned, {{ arg_id }}>, gridtools::array<int, 3> const& offsets) const noexcept {
           return {}; // TODO
         }
@@ -297,18 +297,18 @@
 
       multistage_{{ multistage.id }}_ptrs(
           {%- set comma = joiner(", ") %}
-          {%- for kind_id, kind_info in multistage.kinds.items() %}
+          {%- for kind_id, kind_info in multistage.kinds|dictsort %}
               {{- comma() }}kind_{{ kind_id }}_fields kind_{{ kind_id }}_fields
           {%- endfor -%}
-          {%- for arg_id, arg_info in multistage.temporaries.args.items() %}
+          {%- for arg_id, arg_info in multistage.temporaries.args|dictsort %}
               {{- comma() }}kind_tmp_{{ arg_id }}_fields kind_tmp_{{ arg_id }}_fields
           {%- endfor -%}
           )
           {%- set comma = joiner(", ") %}
-          : {% for kind_id, kind_info in multistage.kinds.items() %}
+          : {% for kind_id, kind_info in multistage.kinds|dictsort %}
               {{- comma() }}kind_{{ kind_id }}_fields_(kind_{{ kind_id }}_fields)
           {%- endfor %}
-          {%- for arg_id, arg_info in multistage.temporaries.args.items() %}
+          {%- for arg_id, arg_info in multistage.temporaries.args|dictsort %}
               {{- comma() }}kind_tmp_{{ arg_id }}_fields_(kind_tmp_{{ arg_id }}_fields)
           {%- endfor -%}{};
   };
