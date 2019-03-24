@@ -47,8 +47,8 @@ namespace {
       {%- else %}
         {%- set init_interval = multistage.intervals[-1].interval[1] %}
       {%- endif %}
-      ptrs.initialize(
-          grid, iblock, jblock, (int)grid.template value_at<gridtools::level<{{ init_interval[0]}}, {{init_interval[1]}}, OffsetLimit>>());
+      ptrs.initialize(iblock, jblock);
+      ptrs.increment_k((int)grid.template value_at<gridtools::level<{{ init_interval[0]}}, {{init_interval[1]}}, OffsetLimit>>());
 
       ptrs.init_caches();
 

@@ -35,11 +35,19 @@
 
             {%- for arg_id, arg_info in kind_info.args|dictsort %}
               {{ arg_info.type }}{{ ' const' if arg_info.readonly }}* ptr_{{ arg_id }}_ = nullptr;
+              {%- if arg_info.cached == 'K' %}
+                {{ arg_info.type }}{{ ' const' if arg_info.readonly }}* ptr_{{ arg_id }}_start_ = nullptr;
+                {{ arg_info.type }}{{ ' const' if arg_info.readonly }}* ptr_{{ arg_id }}_end_ = nullptr;
+              {%- endif %}
             {%- endfor %}
 
             void check() const noexcept {
                 {%- for arg_id, arg_info in kind_info.args|dictsort %}
                   assert(ptr_{{ arg_id }}_ != nullptr);
+                  {%- if arg_info.cached == 'K' %}
+                    assert(ptr_{{ arg_id }}_start_ != nullptr);
+                    assert(ptr_{{ arg_id }}_end_ != nullptr);
+                  {%- endif %}
                 {%- endfor %}
             }
 
@@ -65,17 +73,26 @@
             kind_tmp_{{ arg_id }}_info si_;
 
             {{ arg_info.type }}{{ ' const' if arg_info.readonly }}* ptr_ = nullptr;
+            {%- if arg_info.cached == 'K' %}
+              {{ arg_info.type }}{{ ' const' if arg_info.readonly }}* ptr_start_ = nullptr;
+              {{ arg_info.type }}{{ ' const' if arg_info.readonly }}* ptr_end_ = nullptr;
+            {%- endif %}
 
             void check() const noexcept {
                 assert(ptr_ != nullptr);
+                {%- if arg_info.cached == 'K' %}
+                  assert(ptr_start_ != nullptr);
+                  assert(ptr_end_ != nullptr);
+                {%- endif %}
             }
 
             GT_FUNCTION void increment(int const offset) noexcept { ptr_ += offset; }
+
             GT_FUNCTION void increment_i(int const i) noexcept { increment(si_.get_offset(i, 0, 0)); }
             GT_FUNCTION void increment_j(int const j) noexcept { increment(si_.get_offset(0, j, 0)); }
             GT_FUNCTION void increment_k(int const k) noexcept { increment(si_.get_offset(0, 0, k)); }
 
-            GT_FUNCTION void increment(int const nbx, int const nby, int const i, int const j, int const k) noexcept {
+            GT_FUNCTION void initialize(int const nbx, int const nby, int const i, int const j, int const k) noexcept {
                 increment(si_.get_block_offset(nbx, nby));
                 increment(si_.get_offset(i, j, k));
             }
@@ -86,21 +103,33 @@
           {%- for kind_id, kind_info in multistage["kinds"]|dictsort %}
             kind_{{ kind_id }}_fields_.check();
           {%- endfor %}
+          {%- for arg_id, arg_info in multistage.temporaries.args|dictsort %}
+            kind_tmp_{{ arg_id }}_fields_.check();
+          {%- endfor %}
       }
 
       GT_FUNCTION void increment_i(int const i = 1) noexcept {
           {%- for kind_id, kind_info in multistage["kinds"]|dictsort %}
             kind_{{ kind_id }}_fields_.increment_i(i);
           {%- endfor %}
+          {%- for arg_id, arg_info in multistage.temporaries.args|dictsort %}
+            kind_tmp_{{ arg_id }}_fields_.increment_i(i);
+          {%- endfor %}
       }
       GT_FUNCTION void increment_j(int const j = 1) noexcept {
           {%- for kind_id, kind_info in multistage["kinds"]|dictsort %}
             kind_{{ kind_id }}_fields_.increment_j(j);
           {%- endfor %}
+          {%- for arg_id, arg_info in multistage.temporaries.args|dictsort %}
+            kind_tmp_{{ arg_id }}_fields_.increment_j(j);
+          {%- endfor %}
       }
       GT_FUNCTION void increment_k(int const k = 1) noexcept {
           {%- for kind_id, kind_info in multistage["kinds"]|dictsort %}
             kind_{{ kind_id }}_fields_.increment_k(k);
+          {%- endfor %}
+          {%- for arg_id, arg_info in multistage.temporaries.args|dictsort %}
+            kind_tmp_{{ arg_id }}_fields_.increment_k(k);
           {%- endfor %}
       }
       GT_FUNCTION void increment(int const i, int const j, int const k) noexcept {
@@ -109,11 +138,13 @@
           increment_k(k);
       }
 
-      template <typename Grid>
-      GT_FUNCTION void initialize(const Grid& grid, int const iblock, int const jblock, int const k_pos) {
+      GT_FUNCTION void initialize(int const iblock, int const jblock) {
           // move to block / thread
           {%- for kind_id, kind_info in multistage["kinds"]|dictsort %}
-            kind_{{ kind_id }}_fields_.initialize(blockIdx.x, blockIdx.y, iblock, jblock, k_pos);
+            kind_{{ kind_id }}_fields_.initialize(blockIdx.x, blockIdx.y, iblock, jblock, 0);
+          {%- endfor %}
+          {%- for arg_id, arg_info in multistage.temporaries.args|dictsort %}
+            kind_tmp_{{ arg_id }}_fields_.initialize(blockIdx.x, blockIdx.y, iblock, jblock, 0);
           {%- endfor %}
       }
       GT_FUNCTION_DEVICE void init_caches() noexcept {

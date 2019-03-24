@@ -87,24 +87,24 @@ generated_computation<Grid>::~generated_computation() {
 template<typename Grid>
 void generated_computation<Grid>::run(
         {%- set comma = joiner(", ") -%}
-        {%- for kind_id, kind_info in context.kinds|dictsort() %}
+        {%- for kind_id, kind_info in context.kinds|dictsort %}
           {{- comma() }} const gridtools::array<int, {{ kind_info.layout|reject("equalto", -1)|list|length }}>& strides_{{ kind_id }}
         {%- endfor %}
-        {%- for arg_id, arg_info in context.args|dictsort() %}
+        {%- for arg_id, arg_info in context.args|dictsort %}
           {{- comma() }} {{ arg_info.type }}{{ ' const' if arg_info.read_only }} *ptr_{{ arg_id }}
         {%- endfor %}) {
 
     {%- for multistage in context.multistages %}
       {
-          {%- for arg_id, arg_info in multistage.temporaries.args.items() %}
+          {%- for arg_id, arg_info in multistage.temporaries.args|dictsort %}
             multistage_{{ multistage.id }}_ptrs::kind_tmp_{{ arg_id }}_fields kind_tmp_{{ arg_id }}_fields{kind_tmp_{{ arg_id }}_};
             kind_tmp_{{ arg_id }}_fields.ptr_ = ptr_tmp_{{ arg_id }}_;
           {%- endfor %}
 
-          {%- for kind_id, kind_info in multistage.kinds.items() %}
+          {%- for kind_id, kind_info in multistage.kinds|dictsort %}
             kind_{{ kind_id }}_info kind_{{ kind_id }}_info {strides_{{ kind_id }}};
             multistage_{{ multistage.id }}_ptrs::kind_{{ kind_id }}_fields kind_{{ kind_id }}_fields{kind_{{ kind_id }}_info};
-            {%- for arg_id, arg_info in kind_info.args.items() %}
+            {%- for arg_id, arg_info in kind_info.args|dictsort %}
               kind_{{ kind_id }}_fields.ptr_{{ arg_id }}_ = ptr_{{ arg_id }};
             {%- endfor %}
             kind_{{ kind_id }}_fields.initialize(0, 0, grid_.i_low_bound(), grid_.j_low_bound(), 0);
