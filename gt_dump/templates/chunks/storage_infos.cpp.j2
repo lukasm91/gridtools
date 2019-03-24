@@ -21,6 +21,9 @@
       GT_FUNCTION int get_block_offset(int i_block, int j_block) const noexcept {
           return stride_i_block_ * i_block + stride_j_block_ * j_block;
       }
+      GT_FUNCTION int get_total_size() const noexcept {
+          return 1;
+      }
 
     private:
       static constexpr const int stride_0_ = {{ 1 if not field_info|masked(0) else 0 }}; // i_stride

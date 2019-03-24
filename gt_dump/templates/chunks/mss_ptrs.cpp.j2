@@ -37,17 +37,12 @@
               {{ arg_info.type }}{{ ' const' if arg_info.readonly }}* ptr_{{ arg_id }}_ = nullptr;
               {%- if arg_info.cached == 'K' %}
                 {{ arg_info.type }}{{ ' const' if arg_info.readonly }}* ptr_{{ arg_id }}_start_ = nullptr;
-                {{ arg_info.type }}{{ ' const' if arg_info.readonly }}* ptr_{{ arg_id }}_end_ = nullptr;
               {%- endif %}
             {%- endfor %}
 
             void check() const noexcept {
                 {%- for arg_id, arg_info in kind_info.args|dictsort %}
                   assert(ptr_{{ arg_id }}_ != nullptr);
-                  {%- if arg_info.cached == 'K' %}
-                    assert(ptr_{{ arg_id }}_start_ != nullptr);
-                    assert(ptr_{{ arg_id }}_end_ != nullptr);
-                  {%- endif %}
                 {%- endfor %}
             }
 
@@ -75,15 +70,13 @@
             {{ arg_info.type }}{{ ' const' if arg_info.readonly }}* ptr_ = nullptr;
             {%- if arg_info.cached == 'K' %}
               {{ arg_info.type }}{{ ' const' if arg_info.readonly }}* ptr_start_ = nullptr;
-              {{ arg_info.type }}{{ ' const' if arg_info.readonly }}* ptr_end_ = nullptr;
+              bool is_in_bounds({{ arg_info.type }}{{ ' const' if arg_info.readonly }}* p) const noexcept {
+                  return p >= ptr_start_ && p < ptr_start_ + si_.get_total_size();
+              }
             {%- endif %}
 
             void check() const noexcept {
                 assert(ptr_ != nullptr);
-                {%- if arg_info.cached == 'K' %}
-                  assert(ptr_start_ != nullptr);
-                  assert(ptr_end_ != nullptr);
-                {%- endif %}
             }
 
             GT_FUNCTION void increment(int const offset) noexcept { ptr_ += offset; }
