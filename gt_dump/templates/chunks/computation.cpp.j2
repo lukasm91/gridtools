@@ -43,17 +43,26 @@ generated_computation<Grid>::generated_computation(Grid const& grid)
       kind_tmp_{{ arg_id }}_ = {
           {%- if not arg_info|masked(0) %}
             {{- comma() -}}
-            (int)i_padded_length
-            {{- '* (int)j_padded_length' if not arg_info|masked(1) }}
-            {{- '* (int)k_padded_length' if not arg_info|masked(2) }}
+            (int)i_padded_length *
+            {{- '(int)j_padded_length * ' if not arg_info|masked(1) }}
+            {{- '(int)k_padded_length * ' if not arg_info|masked(2) }}
+            1
           {%- endif %}
           {%- if not arg_info|masked(1) %}
             {{- comma() -}}
             {{- '(int)i_padded_length * ' if not arg_info|masked(0) }}
-            (int)j_padded_length
-            {{- ' * (int)k_padded_length ' if not arg_info|masked(2) }}
-            {{- ' * (int)num_blocks_i' if not arg_info|masked(0) }}
+            (int)j_padded_length *
+            {{- '(int)k_padded_length * ' if not arg_info|masked(2) }}
+            {{- '(int)num_blocks_i * ' if not arg_info|masked(0) }}
+            1
           {%- endif -%}
+          {{- comma() -}}
+          {{- '(int)i_padded_length * ' if not arg_info|masked(0) }}
+          {{- '(int)j_padded_length * ' if not arg_info|masked(1) }}
+          {{- '(int)k_padded_length * ' if not arg_info|masked(2) }}
+          {{- '(int)num_blocks_i * ' if not arg_info|masked(0) }}
+          {{- '(int)num_blocks_j * ' if not arg_info|masked(0) }}
+          1
       };
     {%- endfor %}
 

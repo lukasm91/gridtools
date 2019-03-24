@@ -277,9 +277,14 @@ for mss_id, (mss, mss_stage_analysis) in enumerate(zip(computation.multistages, 
 
         if not k_cache.temporary:
             mss_data["k_caches"][-1]["kind"] = computation.fields.args[k_cache.id].kind
+            if k_cache.fill or k_cache.flush:
+                mss_data["k_caches"][-1]["readonly"] = mss_data["kinds"][computation.fields.args[k_cache.id].kind]["args"][k_cache.id]["readonly"]
             mss_data["kinds"][computation.fields.args[k_cache.id].kind]["args"][k_cache.id]["cached"] = "K"
             mss_data["kinds"][computation.fields.args[k_cache.id].kind]["args"][k_cache.id]["local"] = not k_cache.fill and not k_cache.flush
         else:
+            if k_cache.fill or k_cache.flush:
+                mss_data["k_caches"][-1]["readonly"] = mss_data["temporaries"]["args"][k_cache.id]["readonly"]
+
             mss_data["temporaries"]["args"][k_cache.id]["cached"] = "K"
             mss_data["temporaries"]["args"][k_cache.id]["local"] = not k_cache.fill and not k_cache.flush
 

@@ -50,7 +50,11 @@ namespace {
       ptrs.initialize(iblock, jblock);
       ptrs.increment_k((int)grid.template value_at<gridtools::level<{{ init_interval[0]}}, {{init_interval[1]}}, OffsetLimit>>());
 
-      ptrs.init_caches();
+      if (iblock >= mss_info::max_stage_extent::iminus() &&
+          iblock < current_block_i_size + mss_info::max_stage_extent::iplus() &&
+          jblock >= mss_info::max_stage_extent::jminus() &&
+          jblock < current_block_j_size + mss_info::max_stage_extent::jplus())
+          ptrs.init_caches();
 
       {%- for ij_cache in multistage.ij_caches %}
         {%- if loop.index == 1 %}
@@ -77,7 +81,11 @@ namespace {
         for (int z = (int)grid.template value_at<gridtools::level<{{ interval.interval[0][0] }}, {{ interval.interval[0][1] }}, OffsetLimit>>();
              z <= (int)grid.template value_at<gridtools::level<{{ interval.interval[1][0] }}, {{ interval.interval[1][1] }}, OffsetLimit>>();
              ++z, ptrs.increment_k({{ '1' if multistage.direction != "backward" else '-1' }})) {
-            ptrs.fill_caches();
+            if (iblock >= mss_info::max_stage_extent::iminus() &&
+                iblock < current_block_i_size + mss_info::max_stage_extent::iplus() &&
+                jblock >= mss_info::max_stage_extent::jminus() &&
+                jblock < current_block_j_size + mss_info::max_stage_extent::jplus())
+                ptrs.fill_caches();
 
             {%- for independent_stage_list in interval.stages %}
               {%- if not loop.first %}
@@ -104,7 +112,11 @@ namespace {
               {%- endfor %}
             {%- endfor %}
 
-            ptrs.flush_caches();
+            if (iblock >= mss_info::max_stage_extent::iminus() &&
+                iblock < current_block_i_size + mss_info::max_stage_extent::iplus() &&
+                jblock >= mss_info::max_stage_extent::jminus() &&
+                jblock < current_block_j_size + mss_info::max_stage_extent::jplus())
+                ptrs.flush_caches();
 
             {%- if multistage.ij_caches and multistage.ij_caches|length > 0 %}
               __syncthreads(); // needed because we have an ij cache
@@ -112,6 +124,10 @@ namespace {
         }
       {%- endfor %}
 
-      ptrs.terminate_caches();
+      if (iblock >= mss_info::max_stage_extent::iminus() &&
+          iblock < current_block_i_size + mss_info::max_stage_extent::iplus() &&
+          jblock >= mss_info::max_stage_extent::jminus() &&
+          jblock < current_block_j_size + mss_info::max_stage_extent::jplus())
+          ptrs.terminate_caches();
   }
 {%- endfor %}

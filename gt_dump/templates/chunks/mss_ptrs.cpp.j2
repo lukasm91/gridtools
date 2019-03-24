@@ -51,6 +51,13 @@
                   ptr_{{ arg_id }}_ += offset;
                 {%- endfor %}
             }
+            {%- for arg_id, arg_info in kind_info.args|dictsort %}
+              {%- if arg_info.cached == 'K' %}
+                GT_FUNCTION bool is_arg_{{ arg_id }}_in_bound({{ arg_info.type }}{{ ' const' if arg_info.readonly }}* p) const noexcept {
+                    return p >= ptr_{{ arg_id }}_start_ && p < ptr_{{ arg_id }}_start_ + si_.get_total_size();
+                }
+              {%- endif %}
+            {%- endfor %}
 
             GT_FUNCTION void increment_i(int const i) noexcept { increment(si_.get_offset(i, 0, 0)); }
             GT_FUNCTION void increment_j(int const j) noexcept { increment(si_.get_offset(0, j, 0)); }
@@ -70,7 +77,7 @@
             {{ arg_info.type }}{{ ' const' if arg_info.readonly }}* ptr_ = nullptr;
             {%- if arg_info.cached == 'K' %}
               {{ arg_info.type }}{{ ' const' if arg_info.readonly }}* ptr_start_ = nullptr;
-              bool is_in_bounds({{ arg_info.type }}{{ ' const' if arg_info.readonly }}* p) const noexcept {
+              GT_FUNCTION bool is_arg_in_bound({{ arg_info.type }}{{ ' const' if arg_info.readonly }}* p) const noexcept {
                   return p >= ptr_start_ && p < ptr_start_ + si_.get_total_size();
               }
             {%- endif %}
@@ -146,15 +153,22 @@
               {
                   static constexpr const int kcache_start = {{ k_cache.min_extent }};
                   {%- set forward = multistage.direction == "forward" %}
+                  {{ k_cache.type }}{{ ' const' if k_cache.readonly }}* ptr;
                   {%- for i in range(k_cache.min_extent, k_cache.max_extent) %}
                     {%- if k_cache.temporary %}
-                      k_caches_.arg_tmp_{{ k_cache.id }}_[-kcache_start + {{ i + 1 if forward else i }}] = {{ '__ldg' if k_cache.readonly else '*' -}}(
-                          kind_tmp_{{ k_cache.id }}_fields_.ptr_
-                          + kind_tmp_{{ k_cache.id }}_fields_.si_.get_offset(0, 0, {{ i if forward else i + 1 }}));
+                      ptr = kind_tmp_{{ k_cache.id }}_fields_.ptr_ +
+                        kind_tmp_{{ k_cache.id }}_fields_.si_.get_offset(0, 0, {{ i if forward else i + 1 }});
+                      if (kind_tmp_{{ k_cache.id }}_fields_.is_arg_in_bound(ptr))
+                          k_caches_.arg_tmp_{{ k_cache.id }}_[-kcache_start + {{ i + 1 if forward else i }}] =
+                            {{ '__ldg' if k_cache.readonly else '*' -}}(ptr);
+
                     {%- else %}
-                      k_caches_.arg_{{ k_cache.id }}_[-kcache_start + {{ i + 1 if forward else i }}] = {{ '__ldg' if k_cache.readonly else '*' -}}(
-                          kind_{{ k_cache.kind }}_fields_.ptr_{{ k_cache.id }}_
-                          + kind_{{ k_cache.kind }}_fields_.si_.get_offset(0, 0, {{ i if forward else i + 1 }}));
+
+                      ptr = kind_{{ k_cache.kind }}_fields_.ptr_{{ k_cache.id }}_ +
+                          kind_{{ k_cache.kind }}_fields_.si_.get_offset(0, 0, {{ i if forward else i + 1 }});
+                      if (kind_{{ k_cache.kind }}_fields_.is_arg_{{ k_cache.id }}_in_bound(ptr))
+                          k_caches_.arg_{{ k_cache.id }}_[-kcache_start + {{ i + 1 if forward else i }}] = 
+                            {{ '__ldg' if k_cache.readonly else '*' -}}(ptr);
                     {%- endif %}
                   {%- endfor %}
               }
@@ -182,15 +196,18 @@
 
                   {%- if k_cache.fill %}
                     {%- if k_cache.temporary %}
-                      k_caches_.arg_tmp_{{ k_cache.id }}_[-kcache_start + {{ k_cache.max_extent if forward else k_cache.min_extent }}] =
-                          {{ '__ldg' if k_cache.readonly else '*' -}}(
-                              kind_tmp_{{ k_cache.id }}_fields_.ptr_
-                              + kind_tmp_{{ k_cache.id }}_fields_.si_.get_offset(0, 0, {{ k_cache.max_extent if forward else k_cache.min_extent }}));
+                      {{ k_cache.type }}{{ ' const' if k_cache.readonly }}* ptr = kind_tmp_{{ k_cache.id }}_fields_.ptr_ +
+                          kind_tmp_{{ k_cache.id }}_fields_.si_.get_offset(0, 0, {{ k_cache.max_extent if forward else k_cache.min_extent }});
+                      if (kind_tmp_{{ k_cache.id }}_fields_.is_arg_in_bound(ptr))
+                          k_caches_.arg_tmp_{{ k_cache.id }}_[-kcache_start + {{ k_cache.max_extent if forward else k_cache.min_extent }}] =
+                              {{ '__ldg' if k_cache.readonly else '*' -}}(ptr);
+
                     {%- else %}
-                      k_caches_.arg_{{ k_cache.id }}_[-kcache_start + {{ k_cache.max_extent if forward else k_cache.min_extent }}] =
-                          {{ '__ldg' if k_cache.readonly else '*' -}}(
-                              kind_{{ k_cache.kind }}_fields_.ptr_{{ k_cache.id }}_
-                              + kind_{{ k_cache.kind }}_fields_.si_.get_offset(0, 0, {{ k_cache.max_extent if forward else k_cache.min_extent }}));
+                      {{ k_cache.type }}{{ ' const' if k_cache.readonly }}* ptr = kind_{{ k_cache.kind }}_fields_.ptr_{{ k_cache.id }}_
+                              + kind_{{ k_cache.kind }}_fields_.si_.get_offset(0, 0, {{ k_cache.max_extent if forward else k_cache.min_extent }});
+                      if (kind_{{ k_cache.kind }}_fields_.is_arg_{{ k_cache.id }}_in_bound(ptr))
+                          k_caches_.arg_{{ k_cache.id }}_[-kcache_start + {{ k_cache.max_extent if forward else k_cache.min_extent }}] =
+                              {{ '__ldg' if k_cache.readonly else '*' -}}(ptr);
                     {%- endif %}
                   {%- endif %}
               }
@@ -204,13 +221,15 @@
                   static constexpr const int kcache_start = {{ k_cache.min_extent }};
                   {%- set offset = k_cache.min_extent if multistage.direction == "forward" else k_cache.max_extent %}
                   {%- if k_cache.temporary %}
-                    *(kind_tmp_{{ k_cache.id }}_fields_.ptr_
-                        + kind_tmp_{{ k_cache.id }}_fields_.si_.get_offset(0, 0, {{ offset }})) =
-                        k_caches_.arg_tmp_{{ k_cache.id }}_[-kcache_start + {{ offset }}];
+                    {{ k_cache.type }}* ptr = kind_tmp_{{ k_cache.id }}_fields_.ptr_ +
+                        kind_tmp_{{ k_cache.id }}_fields_.si_.get_offset(0, 0, {{ offset }});
+                    if (kind_tmp_{{ k_cache.id }}_fields_.is_arg_in_bound(ptr))
+                        *ptr = k_caches_.arg_tmp_{{ k_cache.id }}_[-kcache_start + {{ offset }}];
                   {%- else %}
-                    *(kind_{{ k_cache.kind }}_fields_.ptr_{{ k_cache.id }}_
-                        + kind_{{ k_cache.kind }}_fields_.si_.get_offset(0, 0, {{ offset }})) =
-                        k_caches_.arg_{{ k_cache.id }}_[-kcache_start + {{ offset }}];
+                    {{ k_cache.type }}* ptr = kind_{{ k_cache.kind }}_fields_.ptr_{{ k_cache.id }}_
+                        + kind_{{ k_cache.kind }}_fields_.si_.get_offset(0, 0, {{ offset }});
+                    if (kind_{{ k_cache.kind }}_fields_.is_arg_{{ k_cache.id }}_in_bound(ptr))
+                        *ptr = k_caches_.arg_{{ k_cache.id }}_[-kcache_start + {{ offset }}];
                   {%- endif %}
               }
             {%- endif %}
@@ -222,15 +241,18 @@
               {
                   static constexpr const int kcache_start = {{ k_cache.min_extent }};
                   {%- set forward = multistage.direction == "forward" %}
+                  {{ k_cache.type }}* ptr;
                   {%- for i in range(k_cache.min_extent, k_cache.max_extent) %}
                     {%- if k_cache.temporary %}
-                      *(kind_tmp_{{ k_cache.id }}_fields_.ptr_
-                          + kind_tmp_{{ k_cache.id }}_fields_.si_.get_offset(0, 0, {{ i if forward else i + 1 }})) =
-                          k_caches_.arg_tmp_{{ k_cache.id }}_[-kcache_start + {{ i + 1 if forward else i }}];
+                      ptr = kind_tmp_{{ k_cache.id }}_fields_.ptr_ +
+                          kind_tmp_{{ k_cache.id }}_fields_.si_.get_offset(0, 0, {{ i if forward else i + 1 }});
+                      if (kind_tmp_{{ k_cache.id }}_fields_.is_arg_in_bound(ptr))
+                          *ptr = k_caches_.arg_tmp_{{ k_cache.id }}_[-kcache_start + {{ i + 1 if forward else i }}];
                     {%- else %}
-                      *(kind_{{ k_cache.kind }}_fields_.ptr_{{ k_cache.id }}_
-                          + kind_{{ k_cache.kind }}_fields_.si_.get_offset(0, 0, {{ i if forward else i + 1 }})) =
-                          k_caches_.arg_{{ k_cache.id }}_[-kcache_start + {{ i + 1 if forward else i }}];
+                      ptr = kind_{{ k_cache.kind }}_fields_.ptr_{{ k_cache.id }}_ +
+                          kind_{{ k_cache.kind }}_fields_.si_.get_offset(0, 0, {{ i if forward else i + 1 }});
+                      if (kind_{{ k_cache.kind }}_fields_.is_arg_{{ k_cache.id }}_in_bound(ptr))
+                          *ptr = k_caches_.arg_{{ k_cache.id }}_[-kcache_start + {{ i + 1 if forward else i }}];
                     {%- endif %}
                   {%- endfor %}
               }

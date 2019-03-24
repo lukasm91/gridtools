@@ -6,12 +6,12 @@
     public:
       {%- set comma = joiner() %}
       kind_tmp_{{ field_id }}_info({%- if not field_info|masked(0) %}{{ comma() }}int stride_i_block {% endif -%}
-                                   {%- if not field_info|masked(1) %}{{ comma() }}int stride_j_block {% endif -%})
+                                   {%- if not field_info|masked(1) %}{{ comma() }}int stride_j_block {% endif -%}
+                                   {{ comma() }} int total_size)
           {%- set comma = joiner_first(sep=", ", first=': ') %}
-          {%- if not field_info|masked(0) %}{{ comma() -}}stride_i_block_(stride_i_block) {%- endif -%}
-          {%- if not field_info|masked(1) %}{{ comma() -}}stride_j_block_(stride_j_block) {%- endif -%}
-      {
-      }
+          {%- if not field_info|masked(0) %}{{ comma() }}stride_i_block_(stride_i_block) {%- endif -%}
+          {%- if not field_info|masked(1) %}{{ comma() }}stride_j_block_(stride_j_block) {%- endif -%}
+          {{ comma() }}total_size_(total_size) {}
 
       kind_tmp_{{ field_id }}_info() = default;
 
@@ -21,9 +21,7 @@
       GT_FUNCTION int get_block_offset(int i_block, int j_block) const noexcept {
           return stride_i_block_ * i_block + stride_j_block_ * j_block;
       }
-      GT_FUNCTION int get_total_size() const noexcept {
-          return 1;
-      }
+      GT_FUNCTION int get_total_size() const noexcept { return total_size_; }
 
     private:
       static constexpr const int stride_0_ = {{ 1 if not field_info|masked(0) else 0 }}; // i_stride
@@ -57,6 +55,8 @@
       {%- else %}
         int stride_j_block_;
       {%- endif %}
+
+      int total_size_;
   };
 {% endfor %}
 
@@ -102,9 +102,7 @@
       GT_FUNCTION int get_block_offset(int i_block, int j_block) const noexcept {
           return get_offset(gen::block_i_size * i_block, gen::block_j_size * j_block, 0);
       }
-      GT_FUNCTION int get_total_size() const noexcept {
-          return total_size_;
-      }
+      GT_FUNCTION int get_total_size() const noexcept { return total_size_; }
 
     private:
       {%- for i in range(kind_info.layout|length) %}
