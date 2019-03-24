@@ -1,7 +1,7 @@
 template<typename Grid>
 struct generated_computation {
     // all temporary arguments (origin points to allocation, non-origin points to compute domain)
-    {%- for arg_id, arg_info in context.temporaries.items() %}
+    {%- for arg_id, arg_info in context.temporaries|dictsort %}
       kind_tmp_{{ arg_id }}_info kind_tmp_{{ arg_id }}_;
       {{ arg_info.type }}* ptr_tmp_{{ arg_id }}_ = nullptr;
       {{ arg_info.type }}* ptr_tmp_{{ arg_id }}_origin_ = nullptr;
@@ -14,11 +14,11 @@ struct generated_computation {
 
     void run(
         {%- set comma = joiner(", ") -%}
-        {%- for kind_id, kind_info in context.kinds|dictsort() %}
+        {%- for kind_id, kind_info in context.kinds|dictsort %}
           {{- comma() }} const gridtools::array<int, {{ kind_info.layout|reject("equalto", -1)|list|length }}>& strides_{{ kind_id }}
           {{- comma() }} const gridtools::array<int, {{ kind_info.layout|reject("equalto", -1)|list|length }}>& dims_{{ kind_id }}
         {%- endfor %}
-        {%- for arg_id, arg_info in context.args|dictsort() %}
+        {%- for arg_id, arg_info in context.args|dictsort %}
             {{- comma() }} {{- arg_info.type }}{{ ' const' if arg_info.read_only }} *ptr_{{ arg_id }}
         {%- endfor %});
 };
@@ -38,7 +38,7 @@ generated_computation<Grid>::generated_computation(Grid const& grid)
     static constexpr const int j_padded_length = get_blocked_j_padded_length<computation_info::max_arg_extent>::value;
 
     int const k_padded_length = grid_.k_total_length();
-    {% for arg_id, arg_info in context.temporaries.items() %}
+    {% for arg_id, arg_info in context.temporaries|dictsort %}
       {%- set comma = joiner(", ") %}
       kind_tmp_{{ arg_id }}_ = {
           {%- if not arg_info|masked(0) %}
@@ -59,7 +59,7 @@ generated_computation<Grid>::generated_computation(Grid const& grid)
 
     auto const initial_i_offset = (-computation_info::max_arg_extent::iminus() + alignment - 1) / alignment * alignment;
 
-    {% for arg_id, arg_info in context.temporaries.items() -%}
+    {% for arg_id, arg_info in context.temporaries|dictsort -%}
       if (cudaMalloc((void**)(&ptr_tmp_{{ arg_id }}_origin_),
           {{- 'i_padded_length * ' if not arg_info|masked(0) }}
           {{- 'j_padded_length * ' if not arg_info|masked(1) }}
@@ -71,7 +71,7 @@ generated_computation<Grid>::generated_computation(Grid const& grid)
           throw std::runtime_error("cudaMalloc failed");
     {%- endfor %}
     auto const initial_j_offset = -computation_info::max_arg_extent::jminus();
-    {% for arg_id, arg_info in context.temporaries.items() -%}
+    {% for arg_id, arg_info in context.temporaries|dictsort -%}
       ptr_tmp_{{ arg_id }}_ = ptr_tmp_{{ arg_id }}_origin_
           {{- '+ initial_i_offset' if not arg_info|masked(0) }}
           {%- if not arg_info|masked(1) %}
@@ -81,7 +81,7 @@ generated_computation<Grid>::generated_computation(Grid const& grid)
 }
 template<typename Grid>
 generated_computation<Grid>::~generated_computation() {
-    {%- for arg_id, arg_info in context.temporaries.items() %}
+    {%- for arg_id, arg_info in context.temporaries|dictsort %}
       cudaFree(ptr_tmp_{{ arg_id }}_origin_);
     {%- endfor %}
 }
@@ -107,7 +107,7 @@ void generated_computation<Grid>::run(
           {%- endfor %}
 
           {% for kind_id, kind_info in multistage.kinds|dictsort -%}
-            kind_{{ kind_id }}_info kind_{{ kind_id }}_info {strides_{{ kind_id }}};
+            kind_{{ kind_id }}_info kind_{{ kind_id }}_info {strides_{{ kind_id }}, dims_{{ kind_id }}};
             multistage_{{ multistage.id }}_ptrs::kind_{{ kind_id }}_fields kind_{{ kind_id }}_fields{kind_{{ kind_id }}_info};
             {%- for arg_id, arg_info in kind_info.args|dictsort %}
               kind_{{ kind_id }}_fields.ptr_{{ arg_id }}_ = ptr_{{ arg_id }};
@@ -120,10 +120,10 @@ void generated_computation<Grid>::run(
 
           multistage_{{ multistage.id }}_ptrs ptrs{
               {%- set comma = joiner(", ") %}
-              {%- for kind_id, kind_info in multistage.kinds.items() %}
+              {%- for kind_id, kind_info in multistage.kinds|dictsort %}
                   {{- comma() }}kind_{{ kind_id }}_fields
               {%- endfor -%}
-              {%- for arg_id, arg_info in multistage.temporaries.args.items() %}
+              {%- for arg_id, arg_info in multistage.temporaries.args|dictsort %}
                   {{- comma() }}kind_tmp_{{ arg_id }}_fields
               {%- endfor -%}};
           run_multistage_{{ multistage.id }}(ptrs, grid_);

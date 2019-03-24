@@ -5,8 +5,8 @@
   class kind_tmp_{{ field_id }}_info {
     public:
       {%- set comma = joiner() %}
-      kind_tmp_{{ field_id }}_info({%- if not field_info|masked(0) %}{{ comma() -}}int stride_i_block {%- endif -%}
-                                   {%- if not field_info|masked(1) %}{{ comma() -}}int stride_j_block {%- endif -%})
+      kind_tmp_{{ field_id }}_info({%- if not field_info|masked(0) %}{{ comma() }}int stride_i_block {% endif -%}
+                                   {%- if not field_info|masked(1) %}{{ comma() }}int stride_j_block {% endif -%})
           {%- set comma = joiner_first(sep=", ", first=': ') %}
           {%- if not field_info|masked(0) %}{{ comma() -}}stride_i_block_(stride_i_block) {%- endif -%}
           {%- if not field_info|masked(1) %}{{ comma() -}}stride_j_block_(stride_j_block) {%- endif -%}
@@ -63,7 +63,8 @@
 {%- for kind_id, kind_info in context.kinds.items() %}
   class kind_{{ kind_id }}_info {
     public:
-      kind_{{- kind_id }}_info(const gridtools::array<int, {{ kind_info|kind_dimension }}>& strides) noexcept
+      kind_{{- kind_id }}_info(const gridtools::array<int, {{ kind_info|kind_dimension }}>& strides,
+                               const gridtools::array<int, {{ kind_info|kind_dimension }}>& dims) noexcept
           {%- set comma = joiner_first(sep=", ", first=': ') %}
           {%- set info_ns = namespace() %}
           {%- set info_ns.index = 0 %}
@@ -81,7 +82,11 @@
               assert(stride_{{ i }}_ == strides[{{ info_ns.index }}]);
             {%- endif %}
             {%- set info_ns.index = info_ns.index + 1 if not kind_info|masked(i) else info_ns.index %}
-          {%- endfor -%}
+          {%- endfor %}
+
+          total_size_ = 0;
+          for (int i = 0; i < {{ kind_info|kind_dimension }}; ++i)
+              total_size_ = std::max(total_size_, dims[i] * strides[i]);
       }
       kind_{{ kind_id }}_info() = default;
 
@@ -97,6 +102,9 @@
       GT_FUNCTION int get_block_offset(int i_block, int j_block) const noexcept {
           return get_offset(gen::block_i_size * i_block, gen::block_j_size * j_block, 0);
       }
+      GT_FUNCTION int get_total_size() const noexcept {
+          return total_size_;
+      }
 
     private:
       {%- for i in range(kind_info.layout|length) %}
@@ -108,5 +116,6 @@
           int stride_{{ i }}_;
         {%- endif %}
       {%- endfor %}
+      int total_size_;
   };
 {% endfor %}
