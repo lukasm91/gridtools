@@ -93,14 +93,14 @@ namespace {
               {%- endif %}
               {%- for interval_stage in independent_stage_list %}
                 using stage_{{ interval_stage.id }}_extent =
-                    multistage_{{ multistage.id }}_info::stage_{{ interval_stage.id }}_{{ interval_stage.name }}::stage_extent;
+                    multistage_{{ multistage.id }}_info::stage_{{ interval_stage.id }}_{{ interval_stage.name|to_identifier }}::stage_extent;
                 if (iblock >= stage_{{ interval_stage.id }}_extent::iminus()
                     && iblock < current_block_i_size + stage_{{ interval_stage.id }}_extent::iplus()
                     && jblock >= stage_{{ interval_stage.id }}_extent::jminus()
                     && jblock < current_block_j_size + stage_{{ interval_stage.id }}_extent::jplus()) {
 
                     auto eval = Eval<multistage_{{ multistage.id }}_ptrs,
-                        arg_map_{{ multistage.id }}_stage_{{ interval_stage.id }}_{{ interval_stage.name }}>{ptrs};
+                        arg_map_{{ multistage.id }}_stage_{{ interval_stage.id }}_{{ interval_stage.name|to_identifier }}>{ptrs};
                     {{ interval_stage.name }}::apply(eval
                         {%- if interval_stage.overload != "none" -%}
                             , gridtools::interval<

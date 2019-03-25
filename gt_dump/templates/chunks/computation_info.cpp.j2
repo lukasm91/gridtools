@@ -2,7 +2,7 @@
   struct multistage_{{ multistage.id }}_info {
       {%- for independent_stage_list in multistage.stages %}
         {%- for stage in independent_stage_list %}
-          struct stage_{{ stage.id }}_{{ stage.name }} {
+          struct stage_{{ stage.id }}_{{ stage.name|to_identifier }} {
               using stage_extent = gen::extent<{{ stage.stage_extent|join(', ') }}>;
           };
         {%- endfor %}

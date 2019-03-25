@@ -2,7 +2,7 @@
   {%- set arguments = context.arguments %}
   {%- for independent_stage_list in multistage.stages %}
     {%- for stage in independent_stage_list %}
-      struct arg_map_{{ multistage.id }}_stage_{{ stage.id }}_{{ stage.name }} {
+      struct arg_map_{{ multistage.id }}_stage_{{ stage.id }}_{{ stage.name|to_identifier }} {
       {%- for mapper in stage.argmap %}
         template <intent Intent, typename Extent, ushort_t Number>
         GT_FUNCTION constexpr std::integral_constant<unsigned, {{ mapper.arg[1] }}> operator()(
