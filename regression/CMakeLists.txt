@@ -310,3 +310,6 @@ gt_use_dumped_data(copy_stencil_cuda)
 gt_use_dumped_data(horizontal_diffusion_x86_block)
 gt_use_dumped_data(horizontal_diffusion_cuda)
 
+gt_use_dumped_data(horizontal_diffusion_functions_x86_block)
+gt_use_dumped_data(horizontal_diffusion_functions_cuda)
+

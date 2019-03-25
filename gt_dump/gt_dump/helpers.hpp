@@ -80,5 +80,8 @@ namespace gridtools {
             typename RetType =
                 typename get_bound_arg_result_type_helper<IsStaticBound::value, ArgId, BoundArgStoragePairs>::type>
         GT_META_DEFINE_ALIAS(get_bound_arg_result_type, meta::id, RetType);
+
+        template <uint_t ArgId, bool Temporary>
+        struct arg_identifier {};
     } // namespace gt_gen_helpers
 } // namespace gridtools

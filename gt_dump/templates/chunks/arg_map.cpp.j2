@@ -4,9 +4,11 @@
     {%- for stage in independent_stage_list %}
       struct arg_map_{{ multistage.id }}_stage_{{ stage.id }}_{{ stage.name|to_identifier }} {
       {%- for mapper in stage.argmap %}
+        {%- set arg_id = mapper.arg[1] %}
+        {%- set temporary = 'true' if mapper.arg[0] == 'temporary' else 'false' %}
         template <intent Intent, typename Extent, ushort_t Number>
-        GT_FUNCTION constexpr std::integral_constant<unsigned, {{ mapper.arg[1] }}> operator()(
-            gridtools::accessor<{{ mapper.accessor }}, Intent, Extent, Number>) const;
+        GT_FUNCTION constexpr gridtools::gt_gen_helpers::arg_identifier<{{ arg_id }}, {{ temporary }}>
+        operator()(gridtools::accessor<{{ mapper.accessor }}, Intent, Extent, Number>) const;
       {%- endfor %}
       };
     {%- endfor %}
