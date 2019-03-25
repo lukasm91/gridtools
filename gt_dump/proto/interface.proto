@@ -123,4 +123,5 @@ message Computation {
     }
     Fields fields = 4;
     bool positional = 5;
+    int32 offset_limit = 7;
 }

@@ -268,6 +268,7 @@ namespace gridtools {
                 // the default axis is exclusive while all other intervals are inclusive -> modify
                 for_each_type<Msses>(add_mss_f<typename Grid::axis_type::template modify<0, -1>>{&computation});
                 computation.set_positional(IsStateful);
+                computation.set_offset_limit(Grid::axis_type::offset_limit);
 
                 computation.SerializeToOstream(&of);
                 of.close();

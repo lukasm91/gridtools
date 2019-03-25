@@ -308,6 +308,7 @@ for mss_id, (mss, mss_stage_analysis) in enumerate(zip(computation.multistages, 
 context = dict()
 max_arg_extent = reduce(max_extent, arg_extents.values())
 context["max_arg_extent"] = max_arg_extent
+context["offset_limit"] = computation.offset_limit
 
 # kinds
 context["kinds"] = {}
