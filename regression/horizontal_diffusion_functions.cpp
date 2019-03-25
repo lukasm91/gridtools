@@ -169,6 +169,8 @@ struct out_function {
     }
 };
 
+#include GT_DUMP_GENERATED_CODE(hor_diff_functions)
+
 struct horizontal_diffusion_functions : regression_fixture<2> {
     tmp_arg<0> p_flx;
     tmp_arg<1> p_fly;
@@ -182,7 +184,9 @@ struct horizontal_diffusion_functions : regression_fixture<2> {
 
         horizontal_diffusion_repository repo(d1(), d2(), d3());
 
-        make_computation(p_in = make_storage(repo.in),
+        // note: one dump is okay, because all have the same meta data
+        make_computation(GT_DUMP_IDENTIFIER(hor_diff_functions),
+            p_in = make_storage(repo.in),
             p_out = out,
             p_coeff = make_storage(repo.coeff),
             make_multistage(execute::forward(),

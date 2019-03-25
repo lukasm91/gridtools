@@ -305,11 +305,21 @@ endif( COMPONENT_STENCIL_COMPOSITION )
 
 gt_use_dumped_data(vertical_advection_dycore_x86_block)
 gt_use_dumped_data(vertical_advection_dycore_cuda)
+
 gt_use_dumped_data(copy_stencil_x86_block)
 gt_use_dumped_data(copy_stencil_cuda)
+
 gt_use_dumped_data(horizontal_diffusion_x86_block)
 gt_use_dumped_data(horizontal_diffusion_cuda)
 
 gt_use_dumped_data(horizontal_diffusion_functions_x86_block)
 gt_use_dumped_data(horizontal_diffusion_functions_cuda)
 
+gt_use_dumped_data(simple_hori_diff_x86_block)
+gt_use_dumped_data(simple_hori_diff_cuda)
+
+gt_use_dumped_data(horizontal_diffusion_fused_x86_block)
+gt_use_dumped_data(horizontal_diffusion_fused_cuda)
+
+gt_use_dumped_data(tridiagonal_x86_block)
+gt_use_dumped_data(tridiagonal_cuda)

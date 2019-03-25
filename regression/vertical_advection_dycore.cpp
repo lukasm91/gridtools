@@ -199,7 +199,6 @@ TEST_F(vertical_advection_dycore, test) {
     verify_utens_stage();
     benchmark(comp);
 }
-
 TEST_F(vertical_advection_dycore, with_extents) {
     auto comp = make_computation(GT_DUMP_IDENTIFIER(with_extent),
         // p_utens_stage = utens_stage,

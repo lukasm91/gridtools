@@ -60,6 +60,8 @@ struct divflux_function {
 
 using simple_hori_diff = regression_fixture<2>;
 
+#include GT_DUMP_GENERATED_CODE(test)
+
 TEST_F(simple_hori_diff, test) {
     tmp_arg<0> p_lap;
     arg<1> p_coeff;
@@ -72,7 +74,8 @@ TEST_F(simple_hori_diff, test) {
 
     horizontal_diffusion_repository repo(d1(), d2(), d3());
 
-    auto comp = make_computation(p_coeff = make_storage(repo.coeff),
+    auto comp = make_computation(GT_DUMP_IDENTIFIER(test),
+        p_coeff = make_storage(repo.coeff),
         p_in = make_storage(repo.in),
         p_out = out,
         p_crlato = make_storage<j_storage_type>(repo.crlato),

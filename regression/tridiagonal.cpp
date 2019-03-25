@@ -76,6 +76,8 @@ struct backward_thomas {
 
 using tridiagonal = regression_fixture<>;
 
+#include GT_DUMP_GENERATED_CODE(test)
+
 TEST_F(tridiagonal, test) {
     d3() = 6;
 
@@ -89,7 +91,8 @@ TEST_F(tridiagonal, test) {
     arg<3> p_rhs;  // d
     arg<4> p_out;
 
-    make_computation(p_inf = make_storage(-1.),
+    make_computation(GT_DUMP_IDENTIFIER(test),
+        p_inf = make_storage(-1.),
         p_diag = make_storage(3.),
         p_sup = sup,
         p_rhs = rhs,
