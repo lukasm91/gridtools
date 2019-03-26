@@ -49,8 +49,8 @@ namespace copy_stencils_3D_2D_1D_0D {
 
     void handle_error(int) { std::cout << "error" << std::endl; }
 
-    template <typename SrcLayout, typename DstLayout, typename T>
-    bool test(int x, int y, int z) {
+    template <typename SrcLayout, typename DstLayout, typename T, typename ID>
+    bool test(ID &&id, int x, int y, int z) {
 
         uint_t d1 = x;
         uint_t d2 = y;
@@ -76,7 +76,8 @@ namespace copy_stencils_3D_2D_1D_0D {
 
         auto grid_ = make_grid(d1, d2, d3);
 
-        auto copy = gridtools::make_computation<backend_t>(grid_,
+        auto copy = gridtools::make_computation<backend_t>(id,
+            grid_,
             p_in() = in,
             p_out() = out,
             gridtools::make_multistage(execute::forward(), gridtools::make_stage<copy_functor>(p_in(), p_out())));
@@ -105,21 +106,28 @@ constexpr int_t size0 = 59;
 constexpr int_t size1 = 47;
 constexpr int_t size2 = 71;
 
+#include GT_DUMP_GENERATED_CODE(copies3D)
+
 TEST(TESTCLASS, copies3D) {
     EXPECT_EQ((copy_stencils_3D_2D_1D_0D::test<gridtools::layout_map<0, 1, 2>, gridtools::layout_map<0, 1, 2>, double>(
-                  size0, size1, size2)),
+                  GT_DUMP_IDENTIFIER(copies3D), size0, size1, size2)),
         true);
 }
+
+#include GT_DUMP_GENERATED_CODE(copies3Dtranspose)
 
 TEST(TESTCLASS, copies3Dtranspose) {
     EXPECT_EQ((copy_stencils_3D_2D_1D_0D::test<gridtools::layout_map<2, 1, 0>, gridtools::layout_map<0, 1, 2>, double>(
-                  size0, size1, size2)),
+                  GT_DUMP_IDENTIFIER(copies3Dtranspose), size0, size1, size2)),
         true);
 }
 
+/*
+#include GT_DUMP_GENERATED_CODE(copies2Dij)
+
 TEST(TESTCLASS, copies2Dij) {
     EXPECT_EQ((copy_stencils_3D_2D_1D_0D::test<gridtools::layout_map<0, 1, -1>, gridtools::layout_map<0, 1, 2>, double>(
-                  size0, size1, size2)),
+                  GT_DUMP_IDENTIFIER(copies2Dij), size0, size1, size2)),
         true);
 }
 
@@ -226,3 +234,4 @@ TEST(TESTCLASS, copies3D_bool) {
                   size0, size1, size2)),
         true);
 }
+*/

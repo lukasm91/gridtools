@@ -1,3 +1,5 @@
+include(gt_gen)
+
 # collect tests
 fetch_x86_tests(. LABELS unittest_x86)
 fetch_gpu_tests(. LABELS unittest_cuda)

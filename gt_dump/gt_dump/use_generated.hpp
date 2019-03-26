@@ -32,7 +32,7 @@ namespace gridtools {
         class ArgsPair = decltype(split_args<is_arg_storage_pair>(
             std::forward<Arg>(std::declval<Arg>()), std::forward<Args>(std::declval<Args>())...)),
         class ArgStoragePairs = GT_META_CALL(_impl::decay_elements, typename ArgsPair::first_type)>
-    generated_computation<Id, Grid, ArgStoragePairs> make_computation(
+    generated_computation<decay_t<Id>, Grid, ArgStoragePairs> make_computation(
         Id &&, Grid const &grid, Arg &&arg, Args &&... args) {
         auto &&args_pair = split_args<is_arg_storage_pair>(std::forward<Arg>(arg), std::forward<Args>(args)...);
         return {grid, std::move(args_pair.first)};

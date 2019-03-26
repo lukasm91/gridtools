@@ -23,6 +23,9 @@ if (NOT GT_TESTS_ICOSAHEDRAL_GRID)
     fetch_mc_tests(structured_grids LABELS unittest_mc)
     fetch_gpu_tests(structured_grids LABELS unittest_cuda)
 
+    gt_use_dumped_data(test_stencils_x86)
+    gt_use_dumped_data(test_stencils_cuda)
+
     # multi test is a custom test case that tests multiple variations
     foreach( variation CALL PROCEDURES )
         string(TOLOWER ${variation} var_suffix)

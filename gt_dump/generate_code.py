@@ -363,7 +363,7 @@ env.filters['kind_dimension'] = lambda k: sum(1 for v in (k['layout'] if 'layout
 env.filters['masked'] = lambda k, i: k['layout'][i] == -1 if 'layout' in k else k['selector'][i]
 env.filters['unitstride'] = lambda k, i: k['layout'][i] == 0 if 'layout' in k else not any(k['selector'][0:i])
 env.filters['has_kcaches'] = lambda multistage: 'k_caches' in multistage.keys() and len(multistage['k_caches']) > 0
-env.filters['to_identifier'] = lambda name: re.sub(r'[()<>]', "_", name)
+env.filters['to_identifier'] = lambda name: re.sub(r'[()<>:]', "_", name)
 env.filters['bool_to_str'] = lambda b: 'true' if b else 'false'
 
 template = env.get_template("generator.cpp.j2")

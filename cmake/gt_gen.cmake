@@ -71,7 +71,7 @@ endfunction()
 function(gt_use_dumped_data target)
 
     target_compile_definitions(${target}  PRIVATE GT_DUMP_DATA_FOLDER=${GT_DUMP_DATA_FOLDER})
-    target_include_directories(${target}  PUBLIC ../gt_dump)
+    target_include_directories(${target}  PUBLIC ${PROJECT_SOURCE_DIR}/gt_dump)
     target_link_libraries(${target} stdc++fs)
 
     if (GT_DUMP_GENERATE_DATA)
