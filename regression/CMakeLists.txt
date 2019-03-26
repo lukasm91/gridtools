@@ -61,7 +61,7 @@ function (gt_copy_target new_target old_target)
 
     # duplicate target
     get_target_property(target_sources ${old_target} SOURCES)
-    add_library(${new_target} OBJECT ${target_sources} )
+    add_library(${new_target} OBJECT)
 
     foreach(prop ${CMAKE_PROPERTY_LIST})
         get_target_property(target_prop ${old_target} ${prop})
@@ -82,7 +82,6 @@ function(gt_use_dumped_data target)
         target_link_libraries(${target} gt_dump_interface)
     else()
         get_target_property(target_sources ${target} SOURCES)
-        set(new_sources)
         foreach(source ${target_sources})
             get_filename_component(source_path ${source} ABSOLUTE)
             get_filename_component(source_name_we ${source} NAME_WE)
@@ -90,6 +89,8 @@ function(gt_use_dumped_data target)
 
             gt_copy_target(${target}_${source_name_we} ${target})
             target_sources(${target}_${source_name_we} PRIVATE ${source})
+
+            file(GLOB_RECURSE template_files CONFIGURE_DEPENDS ${PROJECT_SOURCE_DIR}/gt_dump/templates/* )
 
             file(GLOB generated_files RELATIVE ${CMAKE_CURRENT_LIST_DIR} CONFIGURE_DEPENDS ${GT_DUMP_DATA_FOLDER}/${prefix}*)
             foreach(generated_file_source ${generated_files})
@@ -100,26 +101,20 @@ function(gt_use_dumped_data target)
 
                 add_custom_command(OUTPUT ${generated_file}
                     COMMAND mkdir -p ${GT_DUMP_DATA_FOLDER}/generated/
-                    COMMAND ${CMAKE_COMMAND} -E env PYTHONPATH="${interface_py_dir}" python ${PROJECT_SOURCE_DIR}/gt_dump/generate_code.py ${generated_file_source_path} ${generated_file}
+                    COMMAND ${CMAKE_COMMAND} -E env PYTHONPATH="${interface_py_dir}"
+                        python ${PROJECT_SOURCE_DIR}/gt_dump/generate_code.py ${generated_file_source_path} ${generated_file}
                     COMMENT "Generate ${generated_file}"
                     MAIN_DEPENDENCY ${generated_file_source}
                     DEPENDS
                         ${PROJECT_SOURCE_DIR}/gt_dump/generate_code.py
-                        ${PROJECT_SOURCE_DIR}/gt_dump/templates/generator.cpp.j2
-                        ${PROJECT_SOURCE_DIR}/gt_dump/templates/chunks/extent.cpp.j2
-                        ${PROJECT_SOURCE_DIR}/gt_dump/templates/chunks/block_helpers.cpp.j2
-                        ${PROJECT_SOURCE_DIR}/gt_dump/templates/chunks/storage_infos.cpp.j2
-                        ${PROJECT_SOURCE_DIR}/gt_dump/templates/chunks/arg_map.cpp.j2
-                        ${PROJECT_SOURCE_DIR}/gt_dump/templates/chunks/mss_ptrs.cpp.j2
-                        ${PROJECT_SOURCE_DIR}/gt_dump/templates/chunks/eval.cpp.j2
-                        ${PROJECT_SOURCE_DIR}/gt_dump/templates/chunks/launch_kernel.cpp.j2
-                        ${PROJECT_SOURCE_DIR}/gt_dump/templates/chunks/run_multistage.cpp.j2
-                        ${PROJECT_SOURCE_DIR}/gt_dump/templates/chunks/computation.cpp.j2
+                        ${template_files}
                         ${generated_file_source_path}
                         gt_dump_python
                         ${PROJECT_SOURCE_DIR}/gt_dump/proto/interface.proto
                     )
-                target_sources(${target}_${source_name_we} PRIVATE ${generated_file})
+                # we need to manually add this dependency because this include is dependent on a macro define which
+                # CMake cannot resolve
+                set_property(SOURCE ${source} APPEND PROPERTY OBJECT_DEPENDS ${generated_file})
             endforeach()
 
             target_compile_definitions(${target}_${source_name_we} PRIVATE GT_DUMP_PREFIX=${prefix})
@@ -128,7 +123,7 @@ function(gt_use_dumped_data target)
 
         endforeach()
 
-        set_target_properties(${target} PROPERTIES SOURCES "${new_sources}")
+        set_target_properties(${target} PROPERTIES SOURCES "")
     endif()
 endfunction()
 
