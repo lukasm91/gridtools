@@ -58,3 +58,7 @@ mark_as_advanced(
     GT_TREAT_WARNINGS_AS_ERROR
     GT_CUDA_PTX_GENERATION
     )
+
+# GT_GEN
+set(GT_DUMP_DATA_FOLDER "/home/lukas/documents/work/gridtools4/build/regression/data" CACHE STRING "path where GT_GEN stores the generated data")
+option(GT_DUMP_GENERATE_DATA "Compile in dump mode" OFF)
