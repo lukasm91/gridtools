@@ -11,7 +11,6 @@ from pprint import pprint
 
 import hashlib
 
-
 class Offset(int):
     def __new__(self, offset):
         assert isinstance(offset, int)
@@ -111,6 +110,7 @@ class Generator:
         self.computation_id = int(
             hashlib.blake2b(in_file.encode("utf-8"), digest_size=7).hexdigest(), 16
         )
+        self.computation_name = sys.argv[1].split("__")[-1]
 
     def dump_input(self):
         print(MessageToJson(self.computation, including_default_value_fields=True))
@@ -417,38 +417,39 @@ class Generator:
 
             multistages.append(mss_data)
 
-        # start setting up dict...
-        context = dict()
-        max_arg_extent = reduce(max_extent, arg_extents.values())
-        context["max_arg_extent"] = max_arg_extent
-        context["offset_limit"] = self.computation.offset_limit
-
-        # kinds
-        context["kinds"] = {}
-        for kind_id, kind_info in self.computation.fields.kinds.items():
-            context["kinds"][kind_id] = {}
-            context["kinds"][kind_id]["layout"] = list(kind_info.layout)
-            context["kinds"][kind_id]["args"] = []
-
-        # args
-        context["args"] = {}
-        for arg_id, arg_info in self.computation.fields.args.items():
-            context["args"][arg_id] = {
-                "kind": arg_info.kind,
-                "type": arg_info.type,
-                "readonly": False,  # TODO
-            }
-            context["kinds"][arg_info.kind]["args"].append(arg_id)
-
-        context["temporaries"] = {}
-        for field_id, field_info in self.computation.temporaries.items():
-            context["temporaries"][field_id] = {}
-            context["temporaries"][field_id]["selector"] = list(field_info.selector)
-            context["temporaries"][field_id]["type"] = field_info.type
-
-        context["multistages"] = multistages
-        context["hash"] = self.computation_id
-        context["name"] = sys.argv[1].split("__")[-1]
+        context = {
+            "hash": self.computation_id,
+            "name": self.computation_name,
+            "max_arg_extent": reduce(max_extent, arg_extents.values()),
+            "offset_limit": self.computation.offset_limit,
+            "kinds": {
+                kind_id: {
+                    "layout": list(kind_info.layout),
+                    "args": [
+                        arg_id
+                        for arg_id, arg_info in self.computation.fields.args.items()
+                        if arg_info.kind == kind_id
+                    ],
+                }
+                for kind_id, kind_info in self.computation.fields.kinds.items()
+            },
+            "args": {
+                arg_id: {
+                    "kind": arg_info.kind,
+                    "type": arg_info.type,
+                    "readonly": False,  # TODO
+                }
+                for arg_id, arg_info in self.computation.fields.args.items()
+            },
+            "temporaries": {
+                field_id: {
+                    "selector": list(field_info.selector),
+                    "type": field_info.type,
+                }
+                for field_id, field_info in self.computation.temporaries.items()
+            },
+            "multistages": multistages,
+        }
 
         pprint(context)
 
