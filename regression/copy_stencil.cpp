@@ -33,10 +33,9 @@ struct copy_stencil : regression_fixture<0> {
 };
 
 #include GT_DUMP_GENERATED_CODE(test)
-#include GT_DUMP_GENERATED_CODE(with_extents)
 
 TEST_F(copy_stencil, test) {
-    tmp_arg<100> p_tmp;
+    tmp_arg<0> p_tmp;
     auto comp = make_computation(GT_DUMP_IDENTIFIER(test),
         p_0 = in,
         p_1 = out,
@@ -46,13 +45,4 @@ TEST_F(copy_stencil, test) {
     comp.run();
     verify(in, out);
     benchmark(comp);
-}
-
-TEST_F(copy_stencil, with_extents) {
-    make_computation(GT_DUMP_IDENTIFIER(with_extents),
-        p_0 = in,
-        p_1 = out,
-        make_multistage(execute::parallel(), make_stage_with_extent<copy_functor, extent<>>(p_0, p_1)))
-        .run();
-    verify(in, out);
 }

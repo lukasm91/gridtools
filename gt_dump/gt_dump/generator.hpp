@@ -183,16 +183,16 @@ namespace gridtools {
             gt_gen::Computation *computation;
             template <typename Esf>
             void operator()() const {
-                auto stage_name = boost::core::demangle(typeid(typename Esf::esf_function).name());
+                auto stage_name = boost::core::demangle(typeid(typename Esf::esf_function_t).name());
                 auto independent_stage = dependent_stages->add_independent_stages();
                 independent_stage->set_name(stage_name);
                 for_each<typename Esf::args_t>(add_arg_f{independent_stage, computation});
 
                 gt_gen::Stage stage;
-                for_each<typename find_intervals<typename Esf::esf_function, Axis>::type>(
+                for_each<typename find_intervals<typename Esf::esf_function_t, Axis>::type>(
                     add_interval_f{stage});
 
-                for_each<copy_into_variadic<typename Esf::esf_function::param_list, std::tuple<>>>(
+                for_each<typename Esf::esf_function_t::param_list>(
                     add_param_f{stage});
 
                 computation->mutable_stages()->insert({stage_name, stage});

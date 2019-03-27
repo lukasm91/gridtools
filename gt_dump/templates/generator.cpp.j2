@@ -203,7 +203,6 @@ namespace gridtools {
 
         template <typename... Args, typename... DataStores>
         void run(arg_storage_pair<Args, DataStores> const&... srcs) {
-            using Backend = gridtools::backend_traits_from_id<target::cuda>;
             tuple_util::for_each(gt_gen_helpers::make_view_f{}, std::make_tuple(srcs...));
             tuple_util::for_each(gt_gen_helpers::make_view_f{}, storage_pairs_);
             computation_.run(

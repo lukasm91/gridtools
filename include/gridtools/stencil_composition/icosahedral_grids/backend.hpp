@@ -9,14 +9,11 @@
  */
 #pragma once
 
-#include <boost/mpl/eval_if.hpp>
-#include <boost/mpl/identity.hpp>
-
 #include "../../common/defs.hpp"
 #include "../../common/generic_metafunctions/shorten.hpp"
 #include "../../common/layout_map_metafunctions.hpp"
+#include "../../meta.hpp"
 #include "../backend_base.hpp"
-#include "../backend_fwd.hpp"
 
 namespace gridtools {
 
@@ -40,22 +37,20 @@ namespace gridtools {
     /**
        The backend is, as usual, declaring what the storage types are
      */
-    template <class BackendId>
-    struct backend : public backend_base<BackendId> {
+    template <class Target>
+    struct backend : public backend_base<Target> {
       public:
-        typedef backend_base<BackendId> base_t;
-
-        using typename base_t::backend_traits_t;
+        typedef backend_base<Target> base_t;
 
         template <typename DimSelector>
         struct select_layout {
-            using layout_map_t = typename _impl::default_layout<BackendId>::type;
+            using layout_map_t = typename _impl::default_layout<Target>::type;
             using dim_selector_4d_t = typename shorten<bool, DimSelector, 4>::type;
             using filtered_layout = typename filter_layout<layout_map_t, dim_selector_4d_t>::type;
 
-            using type = typename boost::mpl::eval_if_c<(DimSelector::size > 4),
+            using type = typename conditional_t<(DimSelector::size > 4),
                 extend_layout_map<filtered_layout, DimSelector::size - 4>,
-                boost::mpl::identity<filtered_layout>>::type;
+                meta::lazy::id<filtered_layout>>::type;
         };
 
         template <unsigned Index, typename LayoutMap, typename Halo>

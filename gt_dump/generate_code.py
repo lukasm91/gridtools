@@ -82,7 +82,7 @@ h = hashlib.blake2b(sys.argv[1].encode('utf-8'), digest_size=7)
 computation = interface_pb2.Computation()
 with open(in_file, "rb") as f:
     computation.ParseFromString(f.read())
-#  print(MessageToJson(computation, including_default_value_fields=True))
+print(MessageToJson(computation, including_default_value_fields=True))
 
 mss1 = computation.multistages[0]
 
@@ -265,6 +265,7 @@ for mss_id, (mss, mss_stage_analysis) in enumerate(zip(computation.multistages, 
 
     mss_data["k_caches"] = []
     for k_cache in mss.k_caches:
+        print(k_cache)
         mss_data["k_caches"].append({
             "id": k_cache.id,
             "temporary": k_cache.temporary,
