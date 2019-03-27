@@ -165,7 +165,7 @@ for mss_id, (mss, mss_stage_analysis) in enumerate(zip(computation.multistages, 
                     interval = message_to_interval(i.interval)
                     if interval.contains(first):
                         overload = interval if i.overload == interface_pb2.StageInterval.INTERVAL else "none"
-                        d_data.append({"name": stage_ref.name, "id": stage_id, "overload": overload})
+                        d_data.append({"name": stage_ref.name.replace("(anonymous namespace)::", ""), "id": stage_id, "overload": overload})
                 stage_id = stage_id + 1
             i_data.append(d_data)
         mss_data["intervals"].append({"interval": (first, last), "stages": i_data})
@@ -180,7 +180,7 @@ for mss_id, (mss, mss_stage_analysis) in enumerate(zip(computation.multistages, 
             s_data = {}
 
             s_data["stage_extent"] = stage_extent
-            s_data["name"] = stage_ref.name
+            s_data["name"] = stage_ref.name.replace("(anonymous namespace)::", "")
             s_data["id"] = stage_id
 
             s_data["argmap"] = []

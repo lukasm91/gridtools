@@ -6,7 +6,7 @@
       {%- for mapper in stage.argmap %}
         {%- set arg_id = mapper.arg[1] %}
         {%- set temporary = 'true' if mapper.arg[0] == 'temporary' else 'false' %}
-        template <intent Intent, typename Extent, size_t Number>
+        template <gridtools::intent Intent, typename Extent, size_t Number>
         GT_FUNCTION constexpr gridtools::gt_gen_helpers::arg_identifier<{{ arg_id }}, {{ temporary }}>
         operator()(gridtools::accessor<{{ mapper.accessor }}, Intent, Extent, Number>) const;
       {%- endfor %}

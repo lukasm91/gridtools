@@ -17,7 +17,7 @@ namespace gen_{{ context.name }}_{{ context.hash }} {
     {%- endfilter %}
 
     template <typename LayoutMap>
-    GT_META_DEFINE_ALIAS(si_array_t, meta::id, (gridtools::array<int, LayoutMap::unmasked_length>));
+    GT_META_DEFINE_ALIAS(si_array_t, gridtools::meta::id, (gridtools::array<int, LayoutMap::unmasked_length>));
 
     template <typename DataStore>
     auto get_ptr(DataStore const &data_store) GT_AUTO_RETURN((gridtools::advanced::get_raw_pointer_of(
@@ -32,7 +32,7 @@ namespace gen_{{ context.name }}_{{ context.hash }} {
 
     template <typename LayoutMap,
         typename RetType = si_array_t<LayoutMap>>
-    RetType extract_unmasked(gridtools::array<uint_t, LayoutMap::masked_length> const& masked) {
+    RetType extract_unmasked(gridtools::array<gridtools::uint_t, LayoutMap::masked_length> const& masked) {
         RetType ret;
         for (int read_pos = 0, write_pos = 0; read_pos < LayoutMap::masked_length; ++read_pos)
             if (LayoutMap::at(read_pos) != -1)
@@ -53,16 +53,16 @@ namespace gen_{{ context.name }}_{{ context.hash }} {
     template <typename BoundData>
     struct computation_ptrs ;
     template <typename... BoundPlaceholders, typename... BoundDataStores>
-    struct computation_ptrs<std::tuple<arg_storage_pair<BoundPlaceholders, BoundDataStores>...>> {
+    struct computation_ptrs<std::tuple<gridtools::arg_storage_pair<BoundPlaceholders, BoundDataStores>...>> {
         using ptrs = std::tuple<typename BoundPlaceholders::data_store_t::data_t *...>;
         using storage_infos = GT_META_CALL(
-            meta::dedup, std::tuple<typename BoundPlaceholders::data_store_t::storage_info_t...>);
+            gridtools::meta::dedup, std::tuple<typename BoundPlaceholders::data_store_t::storage_info_t...>);
         using layout_maps = GT_META_CALL(
-            meta::dedup, std::tuple<typename BoundPlaceholders::data_store_t::storage_info_t::layout_t...>);
-        using si_arrays = GT_META_CALL(meta::transform, (si_array_t, layout_maps));
+            gridtools::meta::dedup, std::tuple<typename BoundPlaceholders::data_store_t::storage_info_t::layout_t...>);
+        using si_arrays = GT_META_CALL(gridtools::meta::transform, (si_array_t, layout_maps));
 
         using bound_arg_keys = GT_META_CALL(
-            meta::transform, (gt_gen_helpers::get_tag_of_plh_t, std::tuple<BoundPlaceholders...>));
+            gridtools::meta::transform, (gridtools::gt_gen_helpers::get_tag_of_plh_t, std::tuple<BoundPlaceholders...>));
 
         ptrs ptrs_;
         si_arrays strides_;
@@ -73,7 +73,7 @@ namespace gen_{{ context.name }}_{{ context.hash }} {
 
             template <typename Placeholder,
                 typename Datastore,
-                typename PtrPosition = typename GT_META_CALL(meta::st_position, (std::tuple<BoundPlaceholders...>, Placeholder))::type>
+                typename PtrPosition = typename GT_META_CALL(gridtools::meta::st_position, (std::tuple<BoundPlaceholders...>, Placeholder))::type>
             void operator()(gridtools::arg_storage_pair<Placeholder, Datastore>&& arg) const {
                 // normal accessor
                 std::get<PtrPosition::value>(ptrs_) = get_ptr(arg.m_value);
@@ -87,7 +87,7 @@ namespace gen_{{ context.name }}_{{ context.hash }} {
                 typename Datastore,
                 typename StorageInfo = typename Placeholder::data_store_t::storage_info_t,
                 typename StrideArray = GT_META_CALL(si_array_t, typename StorageInfo::layout_t),
-                typename SIPosition = typename GT_META_CALL(meta::st_position, (storage_infos, StorageInfo))::type>
+                typename SIPosition = typename GT_META_CALL(gridtools::meta::st_position, (storage_infos, StorageInfo))::type>
             void operator()(gridtools::arg_storage_pair<Placeholder, Datastore>&& arg) const {
                 // normal accessor
                 std::get<SIPosition::value>(strides_) = extract_stride(arg.m_value);
@@ -95,7 +95,7 @@ namespace gen_{{ context.name }}_{{ context.hash }} {
             }
         };
 
-        void assign(std::tuple<arg_storage_pair<BoundPlaceholders, BoundDataStores>...>&& args) {
+        void assign(std::tuple<gridtools::arg_storage_pair<BoundPlaceholders, BoundDataStores>...>&& args) {
             auto assign_args = gridtools::tuple_util::for_each(assign_arg_f{ptrs_});
             assign_args(std::move(args));
 
@@ -103,25 +103,25 @@ namespace gen_{{ context.name }}_{{ context.hash }} {
             assign_si(std::move(args));
         }
 
-        template <uint_t ArgId,
-            typename ArgPosition = GT_META_CALL(gridtools::meta::st_position, (bound_arg_keys, std::integral_constant<uint_t, ArgId>)),
+        template <gridtools::uint_t ArgId,
+            typename ArgPosition = GT_META_CALL(gridtools::meta::st_position, (bound_arg_keys, std::integral_constant<gridtools::uint_t, ArgId>)),
             typename Placeholder = GT_META_CALL(gridtools::meta::at, (std::tuple<BoundPlaceholders...>, ArgPosition)),
             typename StorageInfo = typename Placeholder::data_store_t::storage_info_t>
         struct si_position {
             using type = GT_META_CALL(gridtools::meta::st_position, (storage_infos, StorageInfo));
         };
-        template <uint_t ArgId>
+        template <gridtools::uint_t ArgId>
         using si_position_t = typename si_position<ArgId>::type;
 
-        template <uint_t ArgId>
+        template <gridtools::uint_t ArgId>
         using si_array = GT_META_CALL(gridtools::meta::at, (si_arrays, si_position_t<ArgId>));
 
-        template <uint_t ArgId>
+        template <gridtools::uint_t ArgId>
         si_array<ArgId> get_stride() const {
             return std::get<si_position_t<ArgId>::value>(strides_);
         }
 
-        template <uint_t ArgId>
+        template <gridtools::uint_t ArgId>
         si_array<ArgId> get_dim() const {
             return std::get<si_position_t<ArgId>::value>(dims_);
         }
