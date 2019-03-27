@@ -77,7 +77,7 @@ namespace gridtools {
         template <typename Lambda, typename StorageInfo, typename DataType, typename... Args>
         typename boost::enable_if_c<(sizeof...(Args) == StorageInfo::layout_t::masked_length - 1), void>::type
         lambda_initializer(Lambda init, StorageInfo si, DataType *ptr, Args... args) {
-            for (uint_t i = 0; i < si.template total_length<sizeof...(Args)>(); ++i) {
+            for (int i = 0; i < si.template total_length<sizeof...(Args)>(); ++i) {
                 ptr[si.index(args..., i)] = init(args..., i);
             }
         }
@@ -99,7 +99,7 @@ namespace gridtools {
         template <typename Lambda, typename StorageInfo, typename DataType, typename... Args>
         typename boost::enable_if_c<(sizeof...(Args) < StorageInfo::layout_t::masked_length - 1), void>::type
         lambda_initializer(Lambda init, StorageInfo si, DataType *ptr, Args... args) {
-            for (uint_t i = 0; i < si.template total_length<sizeof...(Args)>(); ++i) {
+            for (int i = 0; i < si.template total_length<sizeof...(Args)>(); ++i) {
                 lambda_initializer(init, si, ptr, args..., i);
             }
         }
@@ -264,15 +264,6 @@ namespace gridtools {
         }
 
         /**
-         * @brief deprecated, see total_length()
-         */
-        template <int Dim>
-        GT_DEPRECATED("dim<Dim>() is deprecated, use total_lengths<Dim>() (deprecated after 1.07.00)")
-        int dim() const {
-            return total_length<Dim>();
-        }
-
-        /**
          * @brief member function to retrieve the total size (dimensions, halos, padding).
          * @return total size
          */
@@ -308,12 +299,6 @@ namespace gridtools {
         }
 
         /**
-         * @brief deprecated, see total_lengths()
-         */
-        GT_DEPRECATED("dims() is deprecated, use total_lengths() (deprecated after 1.07.00)")
-        auto dims() const -> decltype(total_lengths()) { return total_lengths(); }
-
-        /**
          * @brief forward strides() from storage_info
          */
         auto strides() const -> decltype(m_shared_storage_info->strides()) { return m_shared_storage_info->strides(); }
@@ -328,7 +313,7 @@ namespace gridtools {
          * @brief retrieve a pointer to the underlying storage instance.
          * @return shared pointer to the underlying storage instance
          */
-        std::shared_ptr<storage_t> get_storage_ptr() const { return m_shared_storage; }
+        std::shared_ptr<storage_t> const &get_storage_ptr() const { return m_shared_storage; }
 
         /**
          * @brief retrieve a pointer to the underlying storage_info instance.
@@ -362,7 +347,7 @@ namespace gridtools {
         /**
          * @brief reactivate all device read write views to storage
          */
-        void reactivate_device_write_views() const { this->m_shared_storage->reactivate_device_write_views(); }
+        void reactivate_target_write_views() const { this->m_shared_storage->reactivate_target_write_views(); }
 
         /**
          * @brief reactivate all host read write views to storage

@@ -34,7 +34,6 @@ namespace gridtools {
     template <typename DataType>
     struct mc_storage : storage_interface<mc_storage<DataType>> {
         typedef DataType data_t;
-        typedef DataType *ptrs_t;
         typedef state_machine state_machine_t;
 
       private:
@@ -115,11 +114,7 @@ namespace gridtools {
          */
         DataType *get_cpu_ptr() const { return m_ptr; }
 
-        /*
-         * @brief get_ptrs implementation for mc_storage.
-         */
-        DataType *get_ptrs_impl() const { return m_ptr; }
-
+        DataType *get_target_ptr() const { return m_ptr; }
         /*
          * @brief valid implementation for mc_storage.
          */
@@ -151,9 +146,9 @@ namespace gridtools {
         bool host_needs_update_impl() const { return false; }
 
         /*
-         * @brief reactivate_device_write_views implementation for mc_storage.
+         * @brief reactivate_target_write_views implementation for mc_storage.
          */
-        void reactivate_device_write_views_impl() {}
+        void reactivate_target_write_views_impl() {}
 
         /*
          * @brief reactivate_host_write_views implementation for mc_storage.

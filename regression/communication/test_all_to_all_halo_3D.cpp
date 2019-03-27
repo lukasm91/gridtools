@@ -12,8 +12,8 @@
 #include <gridtools/common/array.hpp>
 #include <gridtools/common/boollist.hpp>
 #include <gridtools/communication/all_to_all_halo.hpp>
-#include <gridtools/communication/low-level/proc_grids_3D.hpp>
-#include <gridtools/storage/storage-facility.hpp>
+#include <gridtools/communication/low_level/proc_grids_3D.hpp>
+#include <gridtools/storage/storage_facility.hpp>
 #include <gridtools/tools/mpi_unit_test_driver/device_binding.hpp>
 #include <iostream>
 #include <sstream>
@@ -215,6 +215,8 @@ int main(int argc, char **argv) {
     MPI_Barrier(gridtools::GCL_WORLD);
 
     gridtools::GCL_Finalize();
+
+    return passed;
 }
 #else
 TEST(Communication, test_all_to_all_halo_3D) {

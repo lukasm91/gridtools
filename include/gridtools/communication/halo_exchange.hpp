@@ -10,18 +10,18 @@
 #pragma once
 
 #include "../common/boollist.hpp"
-#include "low-level/Halo_Exchange_3D.hpp"
-#include "low-level/Halo_Exchange_3D_DT.hpp"
-#include "low-level/proc_grids_3D.hpp"
+#include "low_level/Halo_Exchange_3D.hpp"
+#include "low_level/Halo_Exchange_3D_DT.hpp"
+#include "low_level/proc_grids_3D.hpp"
 
-#include "high-level/descriptor_generic_manual.hpp"
-#include "high-level/descriptors.hpp"
-#include "high-level/descriptors_dt.hpp"
-#include "high-level/descriptors_dt_whole.hpp"
-#include "high-level/descriptors_fwd.hpp"
-#include "high-level/descriptors_manual_gpu.hpp"
+#include "high_level/descriptor_generic_manual.hpp"
+#include "high_level/descriptors.hpp"
+#include "high_level/descriptors_dt.hpp"
+#include "high_level/descriptors_dt_whole.hpp"
+#include "high_level/descriptors_fwd.hpp"
+#include "high_level/descriptors_manual_gpu.hpp"
 
-#include "high-level/field_on_the_fly.hpp"
+#include "high_level/field_on_the_fly.hpp"
 
 namespace gridtools {
 
@@ -209,7 +209,7 @@ namespace gridtools {
        \tparam DataType Value type the elements int the arrays
        \tparam DIMS Number of dimensions of data arrays (equal to the dimension of the processor grid)
        \tparam GCL_ARCH Specification of the "architecture", that is the place where the data to be exchanged is.
-       Possible coiches are defined in low-level/gcl_arch.h .
+       Possible coiches are defined in low_level/gcl_arch.h .
     */
     template <typename T_layout_map,
         typename layout2proc_map_abs,
@@ -302,60 +302,6 @@ namespace gridtools {
         explicit halo_exchange_dynamic_ut(typename grid_type::period_type const &c, MPI_Comm const &comm)
             : hd(c.template permute<layout2proc_map_abs>(), comm) {}
 
-        /** constructor that takes the periodicity (mathich the \link
-            boollist_concept \endlink concept, and the MPI CART
-            communicator in DIMS (specified as template argument to the
-            pattern) dimensions of the processing grid. the periodicity is
-            specified in the order chosen by the programmer for the data,
-            as in the rest of the application. It is up tp the
-            construnctor implementation to translate it into the right
-            order depending on the gridtools::layout_map passed to the class.
-
-            Examples:
-            1) hd(period_type(true, true, false), MPI_COMM_WORLD, array<int, 3>{0,0,0});
-               Supposing this this is executed in 8 processors, the communicator used by the pattern is a 2x2x2;
-
-            2) hd(period_type(true, true, false), MPI_COMM_WORLD, array<int, 3>{4,0,0});
-               Supposing this this is executed in 8 processors, the communicator used by the pattern is a 4x2x1;
-
-            2) hd(period_type(true, true, false), MPI_COMM_WORLD, array<int, 3>{4,1,0});
-               Supposing this this is executed in 8 processors, the communicator used by the pattern is a 4x1x2;
-            End of examples.
-
-            \tparam ValueType Value type of the GridTools array of dimensions (deduced)
-            \tparam Size  Size of the GridTools array of dimensions (deduced)
-            \param[in] c Periodicity specification as in \link boollist_concept \endlink
-            \param[in] comm MPI CART communicator with dimension DIMS (specified as template argument to the pattern).
-            \param[in] dims Array of dimensions of the ocmputing grid. Array must provide operator[] up to 3 elements.
-           The behavior is like MPI_Dims_create.
-        */
-        template <typename ValueType, size_t Size>
-        GT_DEPRECATED(
-            "halo_exchange_dynamic_ut(period, MPI_Comm, dims) is deprecated, since it creates an additional "
-            "communicator that is not freed. Use the constructor without dims and pass to it a Cartesian communicator")
-        explicit halo_exchange_dynamic_ut(
-            typename grid_type::period_type const &c, MPI_Comm const &comm, array<ValueType, Size> &&dims)
-            : hd(c.template permute<layout2proc_map_abs>(), _impl::_make_comm(comm, dims)) {}
-
-        /**
-           Same signature of halo_exchange_dynamic_ut [this] constructor but takes the dims array as reference, in case
-           the output of the MPI_Cart_create is needed.
-
-            \tparam ValueType Value type of the GridTools array of dimensions (deduced)
-            \tparam Size  Size of the GridTools array of dimensions (deduced)
-            \param[in] c Periodicity specification as in \link boollist_concept \endlink
-            \param[in] comm MPI CART communicator with dimension DIMS (specified as template argument to the pattern).
-            \param[in] dims Array of dimensions of the ocmputing grid. Array must provide operator[] up to 3 elements.
-           The behavior is like MPI_Dims_create.
-         */
-        template <typename ValueType, size_t Size>
-        GT_DEPRECATED("halo_exchange_dynamic_ut(period, MPI_Comm, dims) is deprecated, since it creates an "
-                      "additional communicator that is not freed. Use the constructor without dims and pass to it "
-                      "a Cartesian communicator")
-        explicit halo_exchange_dynamic_ut(
-            typename grid_type::period_type const &c, MPI_Comm const &comm, array<ValueType, Size> &dims)
-            : hd(c.template permute<layout2proc_map_abs>(), _impl::_make_comm(comm, dims)) {}
-
         /** Function to rerturn the L3 level pattern used inside the pattern itself.
 
             \return The pattern al level 3 used to exchange data
@@ -442,7 +388,7 @@ namespace gridtools {
             hd.pack(fields);
 #ifdef GCL_TRACE
 #ifdef __CUDACC__
-            cudaDeviceSynchronize();
+            GT_CUDA_CHECK(cudaDeviceSynchronize());
 #endif
             double end_time = MPI_Wtime();
             stats_collector<DIMS>::instance()->add_event(
@@ -462,7 +408,7 @@ namespace gridtools {
             hd.unpack(fields);
 #ifdef GCL_TRACE
 #ifdef __CUDACC__
-            cudaDeviceSynchronize();
+            GT_CUDA_CHECK(cudaDeviceSynchronize());
 #endif
             double end_time = MPI_Wtime();
             stats_collector<DIMS>::instance()->add_event(
@@ -586,7 +532,7 @@ namespace gridtools {
        data corresponds to the which dimension in the processor grid
        \tparam DIMS Number of dimensions of data arrays (equal to the dimension of the processor grid)
        \tparam GCL_ARCH Specification of the "architecture", that is the place where the data to be exchanged is.
-       Possible coiches are defined in low-level/gcl_arch.h .
+       Possible coiches are defined in low_level/gcl_arch.h .
     */
     template <typename layout2proc_map, int DIMS, typename Gcl_Arch = gcl_cpu, int version = pick_version<DIMS>::value>
     class halo_exchange_generic_base {

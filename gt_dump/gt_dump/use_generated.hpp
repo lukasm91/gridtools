@@ -1,7 +1,7 @@
 #pragma once
 
-#include <gridtools/stencil-composition/accessor.hpp>
-#include <gridtools/stencil-composition/make_computation.hpp>
+#include <gridtools/stencil_composition/accessor.hpp>
+#include <gridtools/stencil_composition/make_computation.hpp>
 
 #include "helpers.hpp"
 

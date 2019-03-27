@@ -6,7 +6,7 @@
 #include <gridtools/meta/st_contains.hpp>
 #include <gridtools/meta/st_position.hpp>
 #include <gridtools/meta/transform.hpp>
-#include <gridtools/stencil-composition/arg.hpp>
+#include <gridtools/stencil_composition/arg.hpp>
 
 #ifndef __CUDACC__
 #if not defined(WORKAROUND)
@@ -69,7 +69,7 @@ namespace gridtools {
         struct get_bound_arg_result_type_helper<true, ArgId, BoundArgStoragePairs> {
             using Position = GT_META_CALL(get_bound_arg_position, (ArgId, BoundArgStoragePairs));
             using BoundArgStoragePair = GT_META_CALL(meta::at, (BoundArgStoragePairs, Position));
-            using DataType = typename BoundArgStoragePair::view_t::data_t;
+            using DataType = typename BoundArgStoragePair::data_store_t::data_t;
 
             using type = DataType *;
         };
@@ -83,5 +83,22 @@ namespace gridtools {
 
         template <uint_t ArgId, bool Temporary>
         struct arg_identifier {};
+
+        struct make_view_f {
+            template <typename T>
+            void operator()(T &&storage_pair) const {
+                const auto &storage = storage_pair.m_value;
+                if (storage.device_needs_update())
+                    storage.sync();
+                make_target_view(storage);
+            }
+        };
+        struct sync_f {
+            template <typename T>
+            void operator()(T &&storage_pair) const {
+                const auto &storage = storage_pair.m_value;
+                storage.sync();
+            }
+        };
     } // namespace gt_gen_helpers
 } // namespace gridtools

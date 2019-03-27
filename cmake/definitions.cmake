@@ -16,12 +16,7 @@ set(CMAKE_CUDA_EXTENSIONS OFF)
 
 add_library(gridtools INTERFACE)
 add_library(GridTools::gridtools ALIAS gridtools)
-# TODO This is a workaround because cmake thinks that clang supports features,
-# but it does it wrong because our clang 5.0 RC2 does not match cmakes 5.0
-# specification (but 5.0 does)
-if (CMAKE_CXX_KNOWN_FEATURES)
-    target_compile_features(gridtools INTERFACE cxx_std_11)
-endif()
+target_compile_features(gridtools INTERFACE cxx_std_11)
 target_include_directories(gridtools
     INTERFACE
       $<BUILD_INTERFACE:${CMAKE_SOURCE_DIR}/include/>
@@ -34,7 +29,7 @@ set(REQUIRED_BOOST_VERSION 1.58)
 find_package( Boost ${REQUIRED_BOOST_VERSION} REQUIRED )
 target_link_libraries( gridtools INTERFACE Boost::boost)
 
-if (GT_ENABLE_TARGET_X86 OR GT_ENABLE_TARGET_MC)
+if (GT_ENABLE_TARGET_X86 OR GT_ENABLE_TARGET_MC OR GT_ENABLE_TARGET_NAIVE)
     target_link_libraries( gridtools INTERFACE OpenMP::OpenMP_CXX)
 endif()
 
@@ -78,6 +73,20 @@ target_link_libraries(GridToolsTest INTERFACE gridtools)
 target_compile_definitions(GridToolsTest INTERFACE FUSION_MAX_VECTOR_SIZE=20)
 target_compile_definitions(GridToolsTest INTERFACE FUSION_MAX_MAP_SIZE=20)
 target_compile_options(GridToolsTest INTERFACE $<$<COMPILE_LANGUAGE:CUDA>:-arch=${GT_CUDA_ARCH}>)
+if (CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
+    target_compile_options(GridToolsTest INTERFACE 
+        $<$<COMPILE_LANGUAGE:CXX>:-Wall -Wno-unknown-pragmas -Wno-sign-compare -Wno-unused-local-typedefs -Wno-attributes -Wno-unused-but-set-variable>)
+    target_compile_options(GridToolsTest INTERFACE
+        $<$<COMPILE_LANGUAGE:CUDA>:-Xcompiler -Wall,-Wno-unknown-pragmas,-Wno-sign-compare,-Wno-attributes,-Wno-unused-but-set-variable>)
+elseif (CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
+    if (CMAKE_CXX_COMPILER_VERSION VERSION_LESS "3.9.0")
+        # attribute noalias has been added in clang 3.9.0
+        target_compile_options(GridToolsTest INTERFACE 
+            $<$<COMPILE_LANGUAGE:CXX>:-Wno-unknown-attributes>)
+        target_compile_options(GridToolsTest INTERFACE
+            $<$<COMPILE_LANGUAGE:CUDA>:-Xcompiler -Wno-unknown-attributes>)
+    endif ()
+endif()
 if(GT_TESTS_ICOSAHEDRAL_GRID)
     target_compile_definitions(GridToolsTest INTERFACE GT_ICOSAHEDRAL_GRIDS)
 endif()
@@ -97,6 +106,14 @@ if(GT_ENABLE_TARGET_X86)
   target_link_libraries(GridToolsTestX86 INTERFACE GridToolsTest)
   target_compile_options(GridToolsTestX86 INTERFACE -march=native)
 endif(GT_ENABLE_TARGET_X86)
+
+# TESTS ONLY
+if(GT_ENABLE_TARGET_NAIVE)
+  add_library(GridToolsTestNAIVE INTERFACE)
+  target_compile_definitions(GridToolsTestNAIVE INTERFACE GT_BACKEND_NAIVE)
+  target_link_libraries(GridToolsTestNAIVE INTERFACE GridToolsTest)
+  target_compile_options(GridToolsTestNAIVE INTERFACE -march=native)
+endif(GT_ENABLE_TARGET_NAIVE)
 
 ## cuda support ##
 if( GT_ENABLE_TARGET_CUDA )

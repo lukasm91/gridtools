@@ -48,7 +48,7 @@ function (fetch_tests_helper target_arch filetype test_environment subfolder )
 
     if (GT_ENABLE_TARGET_${target_arch_u})
         # get all source files in the current directory
-        file(GLOB test_sources "./${subfolder}/test_*.${filetype}" )
+        file(GLOB test_sources CONFIGURE_DEPENDS "./${subfolder}/test_*.${filetype}" )
         foreach(test_source IN LISTS test_sources )
             # create a nice name for the test case
             get_filename_component (unit_test ${test_source} NAME_WE )
@@ -187,6 +187,10 @@ endfunction()
 function(add_custom_mpi_x86_test)
     add_custom_mpi_test_helper(x86 ${TEST_MPI_SCRIPT} "${MPITEST_HOST_ENVIRONMENT}" ${ARGN})
 endfunction(add_custom_mpi_x86_test)
+
+function(add_custom_mpi_naive_test)
+    add_custom_mpi_test_helper(naive ${TEST_MPI_SCRIPT} "${MPITEST_HOST_ENVIRONMENT}" ${ARGN})
+endfunction(add_custom_mpi_naive_test)
 
 function(add_custom_mpi_mc_test)
     add_custom_mpi_test_helper(mc ${TEST_MPI_SCRIPT} "${MPITEST_HOST_ENVIRONMENT}" ${ARGN})

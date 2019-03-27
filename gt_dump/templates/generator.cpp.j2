@@ -138,7 +138,7 @@ namespace gridtools {
         std::tuple<arg_storage_pair<BoundPlaceholders, BoundDataStores>...>> {
 
         using bound_arg_storage_pairs =
-            std::tuple<_impl::bound_arg_storage_pair<BoundPlaceholders, BoundDataStores>...>;
+            std::tuple<arg_storage_pair<BoundPlaceholders, BoundDataStores>...>;
 
         using StaticPtrsType = 
             gen_{{ context.name }}_{{ context.hash }}::computation_ptrs<std::tuple<arg_storage_pair<BoundPlaceholders, BoundDataStores>...>>;
@@ -202,8 +202,8 @@ namespace gridtools {
         template <typename... Args, typename... DataStores>
         void run(arg_storage_pair<Args, DataStores> const&... srcs) {
             using Backend = gridtools::backend_traits_from_id<target::cuda>;
-            tuple_util::for_each(_impl::make_view_info_f<Backend>{}, std::make_tuple(srcs...));
-            tuple_util::for_each(_impl::make_view_info_f<Backend>{}, storage_pairs_);
+            tuple_util::for_each(gt_gen_helpers::make_view_f{}, std::make_tuple(srcs...));
+            tuple_util::for_each(gt_gen_helpers::make_view_f{}, storage_pairs_);
             computation_.run(
                 {%- set comma = joiner(", ") -%}
                 {%- for kind_id, kind_info in context.kinds|dictsort %}
@@ -213,8 +213,8 @@ namespace gridtools {
                 {%- for arg_id, arg_info in context.args|dictsort() %}
                   {{- comma() }} get_arg<{{ arg_id }}>(srcs...)
                 {%- endfor %});
-            tuple_util::for_each(_impl::sync_f{}, std::make_tuple(srcs...));
-            tuple_util::for_each(_impl::sync_f{}, storage_pairs_);
+            tuple_util::for_each(gt_gen_helpers::sync_f{}, std::make_tuple(srcs...));
+            tuple_util::for_each(gt_gen_helpers::sync_f{}, storage_pairs_);
         }
         void reset_meter() {}
         std::string print_meter() const { return ""; }

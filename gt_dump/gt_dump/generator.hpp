@@ -1,7 +1,7 @@
 #pragma once
 
-#include <gridtools/stencil-composition/accessor.hpp>
-#include <gridtools/stencil-composition/make_computation.hpp>
+#include <gridtools/stencil_composition/accessor.hpp>
+#include <gridtools/stencil_composition/make_computation.hpp>
 
 #include <boost/algorithm/string/replace.hpp>
 #include <boost/core/demangle.hpp>
@@ -58,7 +58,7 @@ namespace gridtools {
 
                 // accessor->mutable_global_accessor()->set_id(ID);
             }
-            template <uint_t ID, intent Intent, typename Extent, ushort_t Dimension>
+            template <uint_t ID, intent Intent, typename Extent, size_t Dimension>
             void operator()(accessor<ID, Intent, Extent, Dimension>) const {
                 auto accessor = stage.add_accessors();
 

@@ -64,7 +64,7 @@ namespace gridtools {
          * @brief This method sets the state machine to a "host needs update" state. This means that
          * previously created device write views will appear as valid views that can be used.
          */
-        void reactivate_device_write_views() { static_cast<Derived *>(this)->reactivate_device_write_views_impl(); }
+        void reactivate_target_write_views() { static_cast<Derived *>(this)->reactivate_target_write_views_impl(); }
 
         /*
          * @brief This method sets the state machine to a "device needs update" state. This means that
@@ -83,16 +83,6 @@ namespace gridtools {
          * @brief This method swaps the data of two storages.
          */
         void swap(storage_interface &other) { static_cast<Derived *>(this)->swap_impl(static_cast<Derived &>(other)); }
-
-        /*
-         * @brief This method retrieves all pointers that are contained in the storage (in case of host_storage
-         * only one pointer, in case of cuda_storage two pointers).
-         * @return struct that contains the pointer(s)
-         */
-        template <typename T>
-        T get_ptrs() const {
-            return static_cast<Derived const *>(this)->get_ptrs_impl();
-        }
 
         /*
          * @brief This method returns information about validity of the storage (e.g., no nullptrs, etc.).

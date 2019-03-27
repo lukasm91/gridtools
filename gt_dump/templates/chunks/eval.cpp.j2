@@ -4,11 +4,11 @@ struct Eval {
 
     template <class Accessor, gridtools::enable_if_t<Accessor::intent_v == gridtools::intent::in, int> = 0>
     GT_FUNCTION_DEVICE auto operator()(Accessor const& arg) const
-        noexcept GT_AUTO_RETURN(static_cast<const Ptrs&>(ptrs_).resolve(decltype(ArgMap{}(arg)){}, arg.offsets()));
+        noexcept GT_AUTO_RETURN(static_cast<const Ptrs&>(ptrs_).resolve(decltype(ArgMap{}(arg)){}, arg));
 
     template <class Accessor, gridtools::enable_if_t<Accessor::intent_v == gridtools::intent::inout, int> = 0>
     GT_FUNCTION_DEVICE auto operator()(Accessor const& arg) const
-        noexcept GT_AUTO_RETURN(ptrs_.resolve(decltype(ArgMap{}(arg)){}, arg.offsets()));
+        noexcept GT_AUTO_RETURN(ptrs_.resolve(decltype(ArgMap{}(arg)){}, arg));
 
     template <gridtools::uint_t I>
     GT_FUNCTION_DEVICE auto operator()(gridtools::global_accessor<I> const& arg) const

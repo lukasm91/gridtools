@@ -26,19 +26,17 @@ namespace {
         uint_t operator()(const Sequence &index_set) const {
             uint_t index = 0;
             for (uint_t i = 0; i < dims_.size(); ++i) {
-                if (i >= dims_[i])
-                    throw std::runtime_error("index out of bounds");
                 index += index_set[i] * strides_[i];
             }
             return index;
         }
 
         uint_t size() {
-            uint_t index = 0;
+            uint_t result = 0;
             for (uint_t i = 0; i < dims_.size(); ++i) {
-                index += dims_[i] * strides_[i];
+                result = std::max(result, dims_[i] * strides_[i]);
             }
-            return index;
+            return result;
         }
 
         uint_t size(uint_t dim) const { return dims_[dim]; }
@@ -90,7 +88,7 @@ TEST(layout_transformation, 3D_reverse_layout) {
 
     Index dst_index(dims, dst_strides);
     double *dst = new double[dst_index.size()];
-    init<3>(dst, dst_index, [](const array<size_t, 3> &a) { return -1; });
+    init<3>(dst, dst_index, [](const array<size_t, 3> &) { return -1; });
 
     gridtools::interface::transform(dst, src, dims, dst_strides, src_strides);
 
@@ -116,7 +114,7 @@ TEST(layout_transformation, 4D_reverse_layout) {
 
     Index dst_index(dims, dst_strides);
     double *dst = new double[dst_index.size()];
-    init<4>(dst, dst_index, [](const array<size_t, 4> &a) { return -1; });
+    init<4>(dst, dst_index, [](const array<size_t, 4> &) { return -1; });
 
     gridtools::interface::transform(dst, src, dims, dst_strides, src_strides);
 
@@ -140,7 +138,7 @@ TEST(layout_transformation, 2D_reverse_layout) {
 
     Index dst_index(dims, dst_strides);
     double *dst = new double[dst_index.size()];
-    init<2>(dst, dst_index, [](const array<size_t, 2> &a) { return -1; });
+    init<2>(dst, dst_index, [](const array<size_t, 2> &) { return -1; });
 
     gridtools::interface::transform(dst, src, dims, dst_strides, src_strides);
 

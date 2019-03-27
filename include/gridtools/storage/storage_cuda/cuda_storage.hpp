@@ -41,7 +41,6 @@ namespace gridtools {
     template <typename DataType>
     struct cuda_storage : storage_interface<cuda_storage<DataType>> {
         typedef DataType data_t;
-        typedef std::array<DataType *, 2> ptrs_t;
         typedef state_machine state_machine_t;
 
       private:
@@ -123,6 +122,11 @@ namespace gridtools {
             return m_gpu_ptr;
         }
 
+        DataType *get_target_ptr() const {
+            GT_ASSERT_OR_THROW(m_gpu_ptr, "This storage has never been initialized.");
+            return m_gpu_ptr;
+        }
+
         /*
          * @brief retrieve the host data pointer.
          * @return host pointer
@@ -179,11 +183,11 @@ namespace gridtools {
         bool host_needs_update_impl() const { return m_state.m_hnu; }
 
         /*
-         * @brief reactivate_device_write_views implementation for cuda_storage.
+         * @brief reactivate_target_write_views implementation for cuda_storage.
          */
-        void reactivate_device_write_views_impl() {
+        void reactivate_target_write_views_impl() {
             GT_ASSERT_OR_THROW(!m_state.m_dnu, "host views are in write mode");
-            m_state.m_hnu = 1;
+            m_state.m_hnu = true;
         }
 
         /*
@@ -191,18 +195,13 @@ namespace gridtools {
          */
         void reactivate_host_write_views_impl() {
             GT_ASSERT_OR_THROW(!m_state.m_hnu, "device views are in write mode");
-            m_state.m_dnu = 1;
+            m_state.m_dnu = true;
         }
 
         /*
          * @brief get_state_machine_ptr implementation for cuda_storage.
          */
         state_machine *get_state_machine_ptr_impl() { return &m_state; }
-
-        /*
-         * @brief get_ptrs implementation for cuda_storage.
-         */
-        ptrs_t get_ptrs_impl() const { return {m_cpu_ptr, m_gpu_ptr}; }
 
         /*
          * @brief valid implementation for cuda_storage.

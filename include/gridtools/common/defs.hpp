@@ -92,11 +92,6 @@ namespace gridtools {
 } // namespace gridtools
 #endif
 
-// macro defining empty copy constructors and assignment operators
-#define GT_DISALLOW_COPY_AND_ASSIGN(TypeName) \
-    TypeName(const TypeName &);               \
-    TypeName &operator=(const TypeName &)
-
 // check boost::optional workaround for CUDA9.2
 #if (defined(__CUDACC_VER_MAJOR__) && __CUDACC_VER_MAJOR__ == 9 && __CUDACC_VER_MINOR__ == 2)
 #if (not defined(BOOST_OPTIONAL_CONFIG_USE_OLD_IMPLEMENTATION_OF_OPTIONAL) || \
@@ -120,13 +115,8 @@ namespace gridtools {
         struct cuda {};
         struct mc {};
         struct x86 {};
-    } // namespace target
-
-    /** tags specifying the strategy to use */
-    namespace strategy {
         struct naive {};
-        struct block {};
-    } // namespace strategy
+    } // namespace target
 
 #define GT_STATIC_ASSERT(Condition, Message) static_assert((Condition), "\n\nGRIDTOOLS ERROR=> " Message "\n\n")
 
@@ -147,7 +137,7 @@ namespace gridtools {
     static_assert(1, "")
 #endif
 
-#if defined(__CUDACC_VER_MAJOR__) && __CUDACC_VER_MAJOR__ < 9
+#if defined(__CUDACC_VER_MAJOR__) && (__CUDACC_VER_MAJOR__ < 9 || __CUDACC_VER_MAJOR__ == 9 && __CUDACC_VER_MINOR__ < 2)
 #define GT_DECLARE_DEFAULT_EMPTY_CTOR(class_name)                          \
     __forceinline__ __host__ __device__ constexpr class_name() noexcept {} \
     static_assert(1, "")
