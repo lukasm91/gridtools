@@ -27,10 +27,7 @@ message Extent {
     int32 kplus = 6;
 }
 
-message GlobalAccessor {
-    int32 id = 1;
-}
-message NormalAccessor {
+message Accessor {
     enum Intent {
         READ_ONLY = 0;
         READ_WRITE = 1;
@@ -40,12 +37,6 @@ message NormalAccessor {
     Extent extent = 2;
     Intent intent = 3;
     int32 dimension = 4;
-}
-message Accessor {
-    oneof accessor {
-        NormalAccessor normal_accessor = 1;
-        GlobalAccessor global_accessor = 2;
-    }
 }
 
 message Stage {
@@ -76,7 +67,6 @@ message Multistage {
     enum ArgType {
         NORMAL = 0;
         TEMPORARY = 1;
-        GLOBAL = 2;
     }
     Policy policy = 1;
     repeated KCache k_caches = 2;
@@ -95,9 +85,6 @@ message Multistage {
     }
     repeated DependentStageList dependent_stages = 4;
 }
-message GlobalParameter {
-    string type = 1;
-}
 
 message Computation {
     map<string, Stage> stages = 1;
@@ -108,7 +95,6 @@ message Computation {
         string type = 3;
     }
     map<int32, Temporary> temporaries = 3;
-    map<int32, GlobalParameter> global_params = 6;
 
     message Fields {
         message Kind {

@@ -12,13 +12,14 @@
 
 #ifndef GT_DUMP_GENERATED_CODE
 // clang-format off
-#define GT_DUMP_GENERATED_CODE(name) <gt_dump/dummy.hpp> \
+#define GT_DUMP_GENERATED_CODE(name) <gt_dump/dummy.hpp>
 // clang-format on
 #endif
 
 #ifndef GT_DUMP_IDENTIFIER
-#define GT_DUMP_IDENTIFIER(name) \
-    (std::string(BOOST_PP_STRINGIZE(GT_DUMP_DATA_FOLDER)) + "/" + boost::replace_all_copy(std::string(__BASE_FILE__ "__" #name), "/", "_"))
+#define GT_DUMP_IDENTIFIER(name)                                  \
+    (std::string(BOOST_PP_STRINGIZE(GT_DUMP_DATA_FOLDER)) + "/" + \
+        boost::replace_all_copy(std::string(__BASE_FILE__ "__" #name), "/", "_"))
 #endif
 
 namespace gridtools {
@@ -38,37 +39,34 @@ namespace gridtools {
         struct is_temporary_plh<plh<Tag, DataStore, Location, Temporary>> : std::integral_constant<bool, Temporary> {};
 
         struct add_param_f {
-            gt_gen::Stage& stage;
+            gt_gen::Stage &stage;
 
             template <uint_t ID>
             void operator()(global_accessor<ID>) const {
                 auto accessor = stage.add_accessors();
 
-                accessor->mutable_normal_accessor()->set_id(ID);
-                accessor->mutable_normal_accessor()->set_intent(gt_gen::NormalAccessor_Intent_READ_ONLY);
-                accessor->mutable_normal_accessor()->set_dimension(3);
+                accessor->set_id(ID);
+                accessor->set_intent(gt_gen::Accessor::READ_ONLY);
+                accessor->set_dimension(3);
 
-                gt_gen::Extent *extent = accessor->mutable_normal_accessor()->mutable_extent();
+                gt_gen::Extent *extent = accessor->mutable_extent();
                 extent->set_iminus(0);
                 extent->set_iplus(0);
                 extent->set_jminus(0);
                 extent->set_jplus(0);
                 extent->set_kminus(0);
                 extent->set_kplus(0);
-
-                // accessor->mutable_global_accessor()->set_id(ID);
             }
             template <uint_t ID, intent Intent, typename Extent, size_t Dimension>
             void operator()(accessor<ID, Intent, Extent, Dimension>) const {
                 auto accessor = stage.add_accessors();
 
-                accessor->mutable_normal_accessor()->set_id(ID);
-                accessor->mutable_normal_accessor()->set_intent(Intent == intent::inout
-                                                                    ? gt_gen::NormalAccessor_Intent_READ_WRITE
-                                                                    : gt_gen::NormalAccessor_Intent_READ_ONLY);
-                accessor->mutable_normal_accessor()->set_dimension(Dimension);
+                accessor->set_id(ID);
+                accessor->set_intent(
+                    Intent == intent::inout ? gt_gen::Accessor::READ_WRITE : gt_gen::Accessor::READ_ONLY);
+                accessor->set_dimension(Dimension);
 
-                gt_gen::Extent *extent = accessor->mutable_normal_accessor()->mutable_extent();
+                gt_gen::Extent *extent = accessor->mutable_extent();
                 extent->set_iminus(Extent::iminus::value);
                 extent->set_iplus(Extent::iplus::value);
                 extent->set_jminus(Extent::jminus::value);
@@ -85,16 +83,6 @@ namespace gridtools {
                 using plh = plh<Tag, DataStoreType, LocationType, Temporary>;
 
                 using layout_map = typename DataStoreType::storage_info_t::layout_t;
-                /*
-                if (layout_map::unmasked_length == 0) {
-                    (*computation->mutable_global_params())[get_tag<Tag>::value].set_type(
-                        boost::core::demangle(typeid(typename DataStoreType::data_t).name()));
-                    auto arg = stage->add_args();
-                    arg->set_id(get_tag<Tag>::value);
-                    arg->set_arg_type(gt_gen::Multistage::GLOBAL);
-                    return;
-                }
-                */
 
                 auto arg = stage->add_args();
                 arg->set_id(get_tag<Tag>::value);
@@ -118,7 +106,9 @@ namespace gridtools {
                     if (not computation->mutable_fields()->mutable_kinds()->count(DataStoreType::storage_info_t::id))
                         for (int i = 0; i < layout_map::masked_length; ++i)
                             (*computation->mutable_fields()->mutable_kinds())[DataStoreType::storage_info_t::id]
-                                .add_layout(layout_map{}.at(i) == -1 ? -1 : layout_map::unmasked_length - 1 - layout_map{}.at(i));
+                                .add_layout(layout_map{}.at(i) == -1
+                                                ? -1
+                                                : layout_map::unmasked_length - 1 - layout_map{}.at(i));
                 }
             }
         };
@@ -157,7 +147,7 @@ namespace gridtools {
                 (GT_META_CALL(meta::transform, (find_esf_interval<EsfFunction, Axis>::template apply, indices_t))));
         };
         struct add_interval_f {
-            gt_gen::Stage& stage;
+            gt_gen::Stage &stage;
 
             void operator()(int) const {}
             template <typename IntervalPair>
@@ -189,11 +179,9 @@ namespace gridtools {
                 for_each<typename Esf::args_t>(add_arg_f{independent_stage, computation});
 
                 gt_gen::Stage stage;
-                for_each<typename find_intervals<typename Esf::esf_function_t, Axis>::type>(
-                    add_interval_f{stage});
+                for_each<typename find_intervals<typename Esf::esf_function_t, Axis>::type>(add_interval_f{stage});
 
-                for_each<typename Esf::esf_function_t::param_list>(
-                    add_param_f{stage});
+                for_each<typename Esf::esf_function_t::param_list>(add_param_f{stage});
 
                 computation->mutable_stages()->insert({stage_name, stage});
             }
@@ -289,10 +277,12 @@ namespace gridtools {
 
     /// generator for intermediate
     template <class Backend, class Grid, class Arg, class... Args, enable_if_t<is_grid<Grid>::value, int> = 0>
-    auto make_computation(std::string const &name, Grid const &grid, Arg &&arg, Args &&... args) GT_AUTO_RETURN(
-        gt_gen_helpers::dump_and_return(make_computation<Backend>(grid, std::forward<Arg>(arg), std::forward<Args>(args)...), name));
+    auto make_computation(std::string const &name, Grid const &grid, Arg &&arg, Args &&... args)
+        GT_AUTO_RETURN(gt_gen_helpers::dump_and_return(
+            make_computation<Backend>(grid, std::forward<Arg>(arg), std::forward<Args>(args)...), name));
     template <class Backend, class Grid, class Arg, class... Args, enable_if_t<is_grid<Grid>::value, int> = 0>
-    auto make_computation(std::string &&name, Grid const &grid, Arg &&arg, Args &&... args) GT_AUTO_RETURN(
-        gt_gen_helpers::dump_and_return(make_computation<Backend>(grid, std::forward<Arg>(arg), std::forward<Args>(args)...), name));
+    auto make_computation(std::string &&name, Grid const &grid, Arg &&arg, Args &&... args)
+        GT_AUTO_RETURN(gt_gen_helpers::dump_and_return(
+            make_computation<Backend>(grid, std::forward<Arg>(arg), std::forward<Args>(args)...), name));
 
 } // namespace gridtools
