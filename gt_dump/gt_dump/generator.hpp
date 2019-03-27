@@ -118,7 +118,7 @@ namespace gridtools {
                     if (not computation->mutable_fields()->mutable_kinds()->count(DataStoreType::storage_info_t::id))
                         for (int i = 0; i < layout_map::masked_length; ++i)
                             (*computation->mutable_fields()->mutable_kinds())[DataStoreType::storage_info_t::id]
-                                .add_layout(layout_map{}.at(i));
+                                .add_layout(layout_map{}.at(i) == -1 ? -1 : layout_map::unmasked_length - 1 - layout_map{}.at(i));
                 }
             }
         };

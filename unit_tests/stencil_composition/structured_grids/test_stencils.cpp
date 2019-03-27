@@ -38,7 +38,7 @@ namespace gridtools {
                 using meta_dst_t = typename storage_tr::
                     select_custom_layout_storage_info<0, DstLayout, zero_halo<DstLayout::masked_length>>::type;
                 using meta_src_t = typename storage_tr::
-                    select_custom_layout_storage_info<0, SrcLayout, zero_halo<SrcLayout::masked_length>>::type;
+                    select_custom_layout_storage_info<1, SrcLayout, zero_halo<SrcLayout::masked_length>>::type;
 
                 using dst_storage_t = storage_tr::data_store_t<float_type, meta_dst_t>;
                 using src_storage_t = storage_tr::data_store_t<float_type, meta_src_t>;
@@ -60,81 +60,113 @@ namespace gridtools {
 } // namespace gridtools
 
 #include GT_DUMP_GENERATED_CODE(copies3D)
+#include GT_DUMP_GENERATED_CODE(copies3Dtranspose)
+#include GT_DUMP_GENERATED_CODE(copies2Dij)
+#include GT_DUMP_GENERATED_CODE(copies2Dik)
+#include GT_DUMP_GENERATED_CODE(copies2Djk)
+#include GT_DUMP_GENERATED_CODE(copies1Di)
+#include GT_DUMP_GENERATED_CODE(copies1Dj)
+#include GT_DUMP_GENERATED_CODE(copies1Dk)
+#include GT_DUMP_GENERATED_CODE(copiesScalar)
+#include GT_DUMP_GENERATED_CODE(copies3DDst)
+#include GT_DUMP_GENERATED_CODE(copies3DtransposeDst)
+#include GT_DUMP_GENERATED_CODE(copies2DijDst)
+#include GT_DUMP_GENERATED_CODE(copies2DikDst)
+#include GT_DUMP_GENERATED_CODE(copies2DjkDst)
+#include GT_DUMP_GENERATED_CODE(copies2DiDst)
+#include GT_DUMP_GENERATED_CODE(copies2DjDst)
+#include GT_DUMP_GENERATED_CODE(copies2DkDst)
+#include GT_DUMP_GENERATED_CODE(copies2DScalarDst)
 
 namespace gridtools {
     namespace {
         TEST_F(stencils, copies3D) {
             do_test<layout_map<0, 1, 2>>(GT_DUMP_IDENTIFIER(copies3D), [](int i, int j, int k) { return i + j + k; });
         }
-        /*
 
         TEST_F(stencils, copies3Dtranspose) {
-            do_test<layout_map<2, 1, 0>>([](int i, int j, int k) { return i + j + k; });
+            do_test<layout_map<2, 1, 0>>(
+                GT_DUMP_IDENTIFIER(copies3Dtranspose), [](int i, int j, int k) { return i + j + k; });
         }
 
         TEST_F(stencils, copies2Dij) {
-            do_test<layout_map<0, 1, -1>>([](int i, int j, int) { return i + j + k_max; });
+            do_test<layout_map<0, 1, -1>>(
+                GT_DUMP_IDENTIFIER(copies2Dij), [](int i, int j, int) { return i + j + k_max; });
         }
 
         TEST_F(stencils, copies2Dik) {
-            do_test<layout_map<0, -1, 1>>([](int i, int, int k) { return i + j_max + k; });
+            do_test<layout_map<0, -1, 1>>(
+                GT_DUMP_IDENTIFIER(copies2Dik), [](int i, int, int k) { return i + j_max + k; });
         }
 
         TEST_F(stencils, copies2Djk) {
-            do_test<layout_map<-1, 0, 1>>([](int, int j, int k) { return i_max + j + k; });
+            do_test<layout_map<-1, 0, 1>>(
+                GT_DUMP_IDENTIFIER(copies2Djk), [](int, int j, int k) { return i_max + j + k; });
         }
 
         TEST_F(stencils, copies1Di) {
-            do_test<layout_map<0, -1, -1>>([](int i, int, int) { return i + j_max + k_max; });
+            do_test<layout_map<0, -1, -1>>(
+                GT_DUMP_IDENTIFIER(copies1Di), [](int i, int, int) { return i + j_max + k_max; });
         }
 
         TEST_F(stencils, copies1Dj) {
-            do_test<layout_map<-1, 0, -1>>([](int, int j, int) { return i_max + j + k_max; });
+            do_test<layout_map<-1, 0, -1>>(
+                GT_DUMP_IDENTIFIER(copies1Dj), [](int, int j, int) { return i_max + j + k_max; });
         }
 
         TEST_F(stencils, copies1Dk) {
-            do_test<layout_map<-1, -1, 0>>([](int, int, int k) { return i_max + j_max + k; });
+            do_test<layout_map<-1, -1, 0>>(
+                GT_DUMP_IDENTIFIER(copies1Dk), [](int, int, int k) { return i_max + j_max + k; });
         }
 
         TEST_F(stencils, copiesScalar) {
-            do_test<layout_map<-1, -1, -1>>([](int, int, int) { return i_max + j_max + k_max; });
+            do_test<layout_map<-1, -1, -1>>(
+                GT_DUMP_IDENTIFIER(copiesScalar), [](int, int, int) { return i_max + j_max + k_max; });
         }
 
         TEST_F(stencils, copies3DDst) {
-            do_test<layout_map<0, 1, 2>, layout_map<2, 0, 1>>([](int i, int j, int k) { return i + j + k; });
+            do_test<layout_map<0, 1, 2>, layout_map<2, 0, 1>>(
+                GT_DUMP_IDENTIFIER(copies3DDst), [](int i, int j, int k) { return i + j + k; });
         }
 
         TEST_F(stencils, copies3DtransposeDst) {
-            do_test<layout_map<2, 1, 0>, layout_map<2, 0, 1>>([](int i, int j, int k) { return i + j + k; });
+            do_test<layout_map<2, 1, 0>, layout_map<2, 0, 1>>(
+                GT_DUMP_IDENTIFIER(copies3DtransposeDst), [](int i, int j, int k) { return i + j + k; });
         }
 
         TEST_F(stencils, copies2DijDst) {
-            do_test<layout_map<1, 0, -1>, layout_map<2, 0, 1>>([](int i, int j, int) { return i + j + k_max; });
+            do_test<layout_map<1, 0, -1>, layout_map<2, 0, 1>>(
+                GT_DUMP_IDENTIFIER(copies2DijDst), [](int i, int j, int) { return i + j + k_max; });
         }
 
         TEST_F(stencils, copies2DikDst) {
-            do_test<layout_map<1, -1, 0>, layout_map<2, 0, 1>>([](int i, int, int k) { return i + j_max + k; });
+            do_test<layout_map<1, -1, 0>, layout_map<2, 0, 1>>(
+                GT_DUMP_IDENTIFIER(copies2DikDst), [](int i, int, int k) { return i + j_max + k; });
         }
 
         TEST_F(stencils, copies2DjkDst) {
-            do_test<layout_map<-1, 1, 0>, layout_map<2, 0, 1>>([](int, int j, int k) { return i_max + j + k; });
+            do_test<layout_map<-1, 1, 0>, layout_map<2, 0, 1>>(
+                GT_DUMP_IDENTIFIER(copies2DjkDst), [](int, int j, int k) { return i_max + j + k; });
         }
 
         TEST_F(stencils, copies2DiDst) {
-            do_test<layout_map<0, -1, -1>, layout_map<2, 0, 1>>([](int i, int, int) { return i + j_max + k_max; });
+            do_test<layout_map<0, -1, -1>, layout_map<2, 0, 1>>(
+                GT_DUMP_IDENTIFIER(copies2DiDst), [](int i, int, int) { return i + j_max + k_max; });
         }
 
         TEST_F(stencils, copies2DjDst) {
-            do_test<layout_map<-1, 0, -1>, layout_map<2, 0, 1>>([](int, int j, int) { return i_max + j + k_max; });
+            do_test<layout_map<-1, 0, -1>, layout_map<2, 0, 1>>(
+                GT_DUMP_IDENTIFIER(copies2DjDst), [](int, int j, int) { return i_max + j + k_max; });
         }
 
         TEST_F(stencils, copies2DkDst) {
-            do_test<layout_map<-1, -1, 0>, layout_map<2, 0, 1>>([](int, int, int k) { return i_max + j_max + k; });
+            do_test<layout_map<-1, -1, 0>, layout_map<2, 0, 1>>(
+                GT_DUMP_IDENTIFIER(copies2DkDst), [](int, int, int k) { return i_max + j_max + k; });
         }
 
         TEST_F(stencils, copies2DScalarDst) {
-            do_test<layout_map<-1, -1, -1>, layout_map<2, 0, 1>>([](int, int, int) { return i_max + j_max + k_max; });
+            do_test<layout_map<-1, -1, -1>, layout_map<2, 0, 1>>(
+                GT_DUMP_IDENTIFIER(copies2DScalarDst), [](int, int, int) { return i_max + j_max + k_max; });
         }
-        */
     } // namespace
 } // namespace gridtools

@@ -50,6 +50,9 @@ namespace gen_{{ context.name }}_{{ context.hash }} {
     auto extract_dim(DataStore const& data_store) GT_AUTO_RETURN(
         extract_unmasked<LayoutMap>(data_store.info().total_lengths()));
 
+    template <typename StorageInfo>
+    GT_META_DEFINE_ALIAS(extract_layout_map, gridtools::meta::id, typename StorageInfo::layout_t);
+
     template <typename BoundData>
     struct computation_ptrs ;
     template <typename... BoundPlaceholders, typename... BoundDataStores>
@@ -57,8 +60,7 @@ namespace gen_{{ context.name }}_{{ context.hash }} {
         using ptrs = std::tuple<typename BoundPlaceholders::data_store_t::data_t *...>;
         using storage_infos = GT_META_CALL(
             gridtools::meta::dedup, std::tuple<typename BoundPlaceholders::data_store_t::storage_info_t...>);
-        using layout_maps = GT_META_CALL(
-            gridtools::meta::dedup, std::tuple<typename BoundPlaceholders::data_store_t::storage_info_t::layout_t...>);
+        using layout_maps = GT_META_CALL(gridtools::meta::transform, (extract_layout_map, storage_infos));
         using si_arrays = GT_META_CALL(gridtools::meta::transform, (si_array_t, layout_maps));
 
         using bound_arg_keys = GT_META_CALL(
