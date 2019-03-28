@@ -263,7 +263,7 @@
       // resolve for not cached arguments (not temporaries)
       {%- for kind_id, kind_info in multistage.kinds|dictsort %}
         {%- for arg_id, arg_info in kind_info.args|dictsort %}
-          {%- if not "cached" in arg_info %}
+          {%- if arg_info.cached == None %}
             GT_FUNCTION_DEVICE {{ arg_info.type }} resolve(gridtools::gt_gen_helpers::arg_identifier<{{ arg_id }}, false>,
                 gridtools::array<int, 3> const& offsets) const noexcept {
                 return {{ '__ldg' if arg_info.readonly else '*' -}}
@@ -283,7 +283,7 @@
 
       // resolve for not cached arguments (temporaries)
       {%- for arg_id, arg_info in multistage.temporaries.args|dictsort %}
-        {%- if not "cached" in arg_info %}
+        {%- if arg_info.cached == None %}
           GT_FUNCTION_DEVICE {{ arg_info.type }} resolve(gridtools::gt_gen_helpers::arg_identifier<{{ arg_id }}, true>,
               gridtools::array<int, 3> const& offsets) const noexcept {
               return {{ '__ldg' if arg_info.readonly else '*' -}}
