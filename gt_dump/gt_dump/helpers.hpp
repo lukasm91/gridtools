@@ -265,5 +265,10 @@ namespace gridtools {
             GT_FUNCTION_DEVICE auto operator()(expr<Op, Ts...> const &arg) const
                 noexcept GT_AUTO_RETURN(expressions::evaluation::value(*this, arg));
         };
+        template <int VBoundary>
+        struct get_padded_boundary
+            : std::integral_constant<int, VBoundary <= 1 ? 1 : VBoundary <= 2 ? 2 : VBoundary <= 4 ? 4 : 8> {
+            GT_STATIC_ASSERT(VBoundary >= 0 && VBoundary <= 8, "TOO LARGE EXTENT");
+        };
     } // namespace gt_gen_helpers
 } // namespace gridtools
