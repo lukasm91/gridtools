@@ -234,17 +234,36 @@ namespace gridtools {
         struct get_blocked_i_padded_length {
             static constexpr const int alignment = 128 / sizeof(double);
 
-            static constexpr const int full_block_i_size =
-                block_i_size - Extent::iminus::value + Extent::iplus::value;
+            static constexpr const int full_block_i_size = block_i_size - Extent::iminus::value + Extent::iplus::value;
             static constexpr const int i_padded_length = (full_block_i_size + alignment - 1) / alignment * alignment;
             static constexpr const int value = i_padded_length;
         };
 
         template <typename Extent>
         struct get_blocked_j_padded_length {
-            static constexpr const int j_padded_length =
-                block_j_size - Extent::jminus::value + Extent::jplus::value;
+            static constexpr const int j_padded_length = block_j_size - Extent::jminus::value + Extent::jplus::value;
             static constexpr const int value = j_padded_length;
+        };
+
+        template <typename Ptrs, typename ArgMap>
+        struct eval {
+            Ptrs &ptrs_;
+
+            template <class Accessor, enable_if_t<Accessor::intent_v == intent::in, int> = 0>
+            GT_FUNCTION_DEVICE auto operator()(Accessor const &arg) const
+                noexcept GT_AUTO_RETURN(static_cast<const Ptrs &>(ptrs_).resolve(decltype(ArgMap{}(arg)){}, arg));
+
+            template <class Accessor, enable_if_t<Accessor::intent_v == intent::inout, int> = 0>
+            GT_FUNCTION_DEVICE auto operator()(Accessor const &arg) const
+                noexcept GT_AUTO_RETURN(ptrs_.resolve(decltype(ArgMap{}(arg)){}, arg));
+
+            template <uint_t I>
+            GT_FUNCTION_DEVICE auto operator()(global_accessor<I> const &arg) const
+                noexcept GT_AUTO_RETURN(ptrs_.resolve(decltype(ArgMap{}(arg)){}));
+
+            template <class Op, class... Ts>
+            GT_FUNCTION_DEVICE auto operator()(expr<Op, Ts...> const &arg) const
+                noexcept GT_AUTO_RETURN(expressions::evaluation::value(*this, arg));
         };
     } // namespace gt_gen_helpers
 } // namespace gridtools

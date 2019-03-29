@@ -99,7 +99,7 @@ namespace {
                     && jblock >= stage_{{ interval_stage.id }}_extent::jminus()
                     && jblock < current_block_j_size + stage_{{ interval_stage.id }}_extent::jplus()) {
 
-                    auto eval = Eval<multistage_{{ multistage.id }}_ptrs,
+                    auto eval = helpers::eval<multistage_{{ multistage.id }}_ptrs,
                         arg_map_{{ multistage.id }}_stage_{{ interval_stage.id }}_{{ interval_stage.name|to_identifier }}>{ptrs};
                     {{ interval_stage.name }}::apply(eval
                         {%- if interval_stage.overload != "none" -%}
