@@ -1,7 +1,8 @@
+// vi:syntax=cpp
+
 {%- for multistage in context.multistages %}
-  {%- set mss_id = loop.index0 %}
   template <typename Grid>
-  __global__ void launch_kernel_{{ multistage.id }}(multistage_{{ multistage.id }}_ptrs ptrs, Grid grid) {
+  __global__ void {{ multistage.launch_kernel }}(multistage_{{ multistage.id }}_ptrs ptrs, Grid grid) {
 
       static constexpr const int OffsetLimit = {{ context.offset_limit }};
 
@@ -92,7 +93,7 @@
                     && jblock < current_block_j_size + stage_{{ interval_stage.id }}_extent::jplus()) {
 
                     auto eval = helpers::eval<multistage_{{ multistage.id }}_ptrs,
-                        arg_map_{{ multistage.id }}_stage_{{ interval_stage.id }}_{{ interval_stage.name|to_identifier }}>{ptrs};
+                        {{ interval_stage.argmap_name }}>{ptrs};
                     {{ interval_stage.name }}::apply(eval
                         {%- if interval_stage.overload != "none" -%}
                             , gt::interval<

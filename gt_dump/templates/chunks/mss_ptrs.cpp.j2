@@ -1,3 +1,5 @@
+// vi:syntax=cpp
+
 {%- for multistage in context.multistages %}
   class multistage_{{ multistage.id }}_ptrs {
   {%- if multistage|has_kcaches %}
@@ -22,7 +24,7 @@
                 return i * i_stride_ + j * j_stride_;
             }
             static constexpr int i_stride_ = 1;
-            static constexpr int j_stride_ = block_i_size +
+            static constexpr int j_stride_ = helpers::block_i_size +
                                                  -multistage_{{ multistage.id }}_info::max_stage_extent::iminus() +
                                                  multistage_{{ multistage.id }}_info::max_stage_extent::iplus();
         } ij_caches_;

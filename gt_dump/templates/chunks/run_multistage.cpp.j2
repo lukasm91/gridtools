@@ -1,3 +1,5 @@
+// vi:syntax=cpp
+
 {%- for multistage in context.multistages %}
   template <typename Grid>
   void run_multistage_{{ multistage.id }}(multistage_{{ multistage.id }}_ptrs const& ptrs, Grid const& grid) {
@@ -24,9 +26,9 @@
       dim3 blocks{num_blocks_i, num_blocks_j, num_blocks_k};
 
   #ifdef __CUDACC__
-      launch_kernel_{{ multistage.id }}<<<blocks, threads>>>(ptrs, grid);
+      {{ multistage.launch_kernel }}<<<blocks, threads>>>(ptrs, grid);
   #else
-      launch_kernel_{{ multistage.id }}(ptrs, grid);
+      {{ multistage.launcH_kernel }}(ptrs, grid);
   #endif
   #ifndef NDEBUG
       if (cudaDeviceSynchronize() != cudaSuccess)

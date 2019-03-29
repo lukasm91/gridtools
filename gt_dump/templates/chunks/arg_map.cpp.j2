@@ -4,10 +4,10 @@
   {%- set arguments = context.arguments %}
   {%- for independent_stage_list in multistage.stages %}
     {%- for stage in independent_stage_list %}
-      struct arg_map_{{ multistage.id }}_stage_{{ stage.id }}_{{ stage.name|to_identifier }} {
+      struct {{ stage.argmap_name }} {
       {%- for mapper in stage.argmap %}
         {%- set arg_id = mapper.arg[1] %}
-        {%- set temporary = 'true' if mapper.arg[0] == 'temporary' else 'false' %}
+        {%- set temporary = (mapper.arg[0] == 'temporary')|bool_to_str %}
         template <gt::intent Intent, typename Extent, size_t Number>
         GT_FUNCTION constexpr helpers::arg_identifier<{{ arg_id }}, {{ temporary }}>
         operator()(gt::accessor<{{ mapper.accessor }}, Intent, Extent, Number>) const;

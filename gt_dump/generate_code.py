@@ -83,6 +83,9 @@ def message_to_level(l):
 def message_to_interval(i):
     return Interval(message_to_level(i.begin), message_to_level(i.end))
 
+# replaces some chars that are not supported in identifier
+def to_identifier(name):
+    return re.sub(r"[()<>:]", "_", name)
 
 def merge_dicts(f, A, B):
     return {
@@ -178,7 +181,11 @@ class Generator:
         return "d_{}_i_{}".format(id_d, id_i)
 
     @staticmethod
-    def _make_intervals(mss, stage_info):
+    def _make_argmap_name(id_mss, id_d, id_i, stage_name):
+        return "arg_map_{}_{}_{}_{}".format(id_mss, id_d, id_i, to_identifier(stage_name))
+
+    @staticmethod
+    def _make_intervals(mss_id, mss, stage_info):
         intervals = [
             message_to_interval(interval.interval)
             for d in mss.dependent_stages
@@ -201,6 +208,7 @@ class Generator:
                         {
                             "name": Generator._restore_stage_name(stage_ref.name),
                             "id": Generator._make_stage_id(id_d, id_i),
+                            "argmap_name": Generator._make_argmap_name(mss_id, id_d, id_i, Generator._restore_stage_name(stage_ref.name)),
                             "overload": (
                                 message_to_interval(i.interval)
                                 if i.overload == interface_pb2.StageInterval.INTERVAL
@@ -293,7 +301,7 @@ class Generator:
     def _make_multistage(self, mss_id, mss, mss_stage_analysis):
         mss_data = {
             "id": mss_id,
-            "intervals": self._make_intervals(mss, self.computation.stages),
+            "intervals": self._make_intervals(mss_id, mss, self.computation.stages),
             "max_stage_extent": reduce(
                 lambda l, r: max_extent(l, reduce(max_extent, r)),
                 mss_stage_analysis,
@@ -314,6 +322,7 @@ class Generator:
                         "stage_extent": stage_extent,
                         "name": stage_ref.name.replace("(anonymous namespace)::", ""),
                         "id": Generator._make_stage_id(id_d, id_i),
+                        "argmap_name": Generator._make_argmap_name(mss_id, id_d, id_i, stage_ref.name),
                         "argmap": [
                             {
                                 "accessor": accessor.id,
@@ -367,6 +376,7 @@ class Generator:
                 }
                 for ij_cache in mss.ij_caches
             ],
+            "launch_kernel": "launch_kernel_{}".format(mss_id),
         }
 
         k_extents = {}
@@ -496,7 +506,7 @@ class Generator:
                 "has_kcaches": lambda multistage: (
                     "k_caches" in multistage.keys() and len(multistage["k_caches"]) > 0
                 ),
-                "to_identifier": lambda name: re.sub(r"[()<>:]", "_", name),
+                "to_identifier": to_identifier,
                 "bool_to_str": lambda b: "true" if b else "false",
             }
         )
