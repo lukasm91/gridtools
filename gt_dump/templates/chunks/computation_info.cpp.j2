@@ -1,16 +1,18 @@
+// vi:syntax=cpp
+
 {%- for multistage in context.multistages %}
   struct multistage_{{ multistage.id }}_info {
       {%- for independent_stage_list in multistage.stages %}
         {%- for stage in independent_stage_list %}
           struct stage_{{ stage.id }}_{{ stage.name|to_identifier }} {
-              using stage_extent = gen::extent<{{ stage.stage_extent|join(', ') }}>;
+              using stage_extent = helpers::extent<{{ stage.stage_extent|join(', ') }}>;
           };
         {%- endfor %}
       {%- endfor %}
-      using max_stage_extent = gen::extent<{{ multistage.max_stage_extent|join(', ') }}>;
+      using max_stage_extent = helpers::extent<{{ multistage.max_stage_extent|join(', ') }}>;
   };
 {%- endfor %}
 
 struct computation_info {
-    using max_arg_extent = gen::extent<{{ context.max_arg_extent|join(', ') }}>;
+    using max_arg_extent = helpers::extent<{{ context.max_arg_extent|join(', ') }}>;
 };

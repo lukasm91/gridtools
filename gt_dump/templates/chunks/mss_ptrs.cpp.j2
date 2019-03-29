@@ -22,7 +22,7 @@
                 return i * i_stride_ + j * j_stride_;
             }
             static constexpr int i_stride_ = 1;
-            static constexpr int j_stride_ = gen::block_i_size +
+            static constexpr int j_stride_ = block_i_size +
                                                  -multistage_{{ multistage.id }}_info::max_stage_extent::iminus() +
                                                  multistage_{{ multistage.id }}_info::max_stage_extent::iplus();
         } ij_caches_;
@@ -264,15 +264,15 @@
       {%- for kind_id, kind_info in multistage.kinds|dictsort %}
         {%- for arg_id, arg_info in kind_info.args|dictsort %}
           {%- if arg_info.cached == None %}
-            GT_FUNCTION_DEVICE {{ arg_info.type }} resolve(gridtools::gt_gen_helpers::arg_identifier<{{ arg_id }}, false>,
-                gridtools::array<int, 3> const& offsets) const noexcept {
+            GT_FUNCTION_DEVICE {{ arg_info.type }} resolve(helpers::arg_identifier<{{ arg_id }}, false>,
+                gt::array<int, 3> const& offsets) const noexcept {
                 return {{ '__ldg' if arg_info.readonly else '*' -}}
                     (kind_{{ kind_id }}_fields_.ptr_{{ arg_id }}_
                     + kind_{{ kind_id }}_fields_.si_.get_offset(offsets[0], offsets[1], offsets[2]));
             }
             {%- if not arg_info.readonly %}
-              GT_FUNCTION_DEVICE {{ arg_info.type }}& resolve(gridtools::gt_gen_helpers::arg_identifier<{{ arg_id }}, false>,
-                  gridtools::array<int, 3> const& offsets) noexcept {
+              GT_FUNCTION_DEVICE {{ arg_info.type }}& resolve(helpers::arg_identifier<{{ arg_id }}, false>,
+                  gt::array<int, 3> const& offsets) noexcept {
                   return *(kind_{{ kind_id }}_fields_.ptr_{{ arg_id }}_
                       + kind_{{ kind_id }}_fields_.si_.get_offset(offsets[0], offsets[1], offsets[2]));
               }
@@ -284,15 +284,15 @@
       // resolve for not cached arguments (temporaries)
       {%- for arg_id, arg_info in multistage.temporaries.args|dictsort %}
         {%- if arg_info.cached == None %}
-          GT_FUNCTION_DEVICE {{ arg_info.type }} resolve(gridtools::gt_gen_helpers::arg_identifier<{{ arg_id }}, true>,
-              gridtools::array<int, 3> const& offsets) const noexcept {
+          GT_FUNCTION_DEVICE {{ arg_info.type }} resolve(helpers::arg_identifier<{{ arg_id }}, true>,
+              gt::array<int, 3> const& offsets) const noexcept {
               return {{ '__ldg' if arg_info.readonly else '*' -}}
                   (kind_tmp_{{ arg_id }}_fields_.ptr_
                   + kind_tmp_{{ arg_id }}_fields_.si_.get_offset(offsets[0], offsets[1], offsets[2]));
           }
           {%- if not arg_info.readonly %}
-            GT_FUNCTION_DEVICE {{ arg_info.type }}& resolve(gridtools::gt_gen_helpers::arg_identifier<{{ arg_id }}, true>,
-                gridtools::array<int, 3> const& offsets) noexcept {
+            GT_FUNCTION_DEVICE {{ arg_info.type }}& resolve(helpers::arg_identifier<{{ arg_id }}, true>,
+                gt::array<int, 3> const& offsets) noexcept {
                 return *(kind_tmp_{{ arg_id }}_fields_.ptr_
                     + kind_tmp_{{ arg_id }}_fields_.si_.get_offset(offsets[0], offsets[1], offsets[2]));
             }
@@ -304,7 +304,7 @@
       {#
       {%- for arg_id, arg_info in multistage.globals|dictsort %}
         GT_FUNCTION_DEVICE {{ arg_info.type }} resolve(std::integral_constant<unsigned, {{ arg_id }}>,
-            gridtools::array<int, 3> const& offsets) const noexcept {
+            gt::array<int, 3> const& offsets) const noexcept {
             return {}; // TODO
         }
       {%- endfor %}
@@ -312,14 +312,14 @@
 
       // resolve for ij caches
       {%- for ij_cache in multistage["ij_caches"] %}
-        GT_FUNCTION_DEVICE {{ ij_cache.type }} resolve(gridtools::gt_gen_helpers::arg_identifier<{{ ij_cache.id }}, {{ ij_cache.temporary|bool_to_str }}>,
-            gridtools::array<int, 3> const& offsets) const noexcept {
+        GT_FUNCTION_DEVICE {{ ij_cache.type }} resolve(helpers::arg_identifier<{{ ij_cache.id }}, {{ ij_cache.temporary|bool_to_str }}>,
+            gt::array<int, 3> const& offsets) const noexcept {
             return *(ij_caches_.arg_{{ 'tmp_' if ij_cache.temporary }}{{ ij_cache.id }}_ +
                      ij_caches_.get_offset(offsets[0], offsets[1], offsets[2]));
         }
         {%- if not ij_cache.readonly %}
-          GT_FUNCTION_DEVICE {{ ij_cache.type }}& resolve(gridtools::gt_gen_helpers::arg_identifier<{{ ij_cache.id }}, {{ ij_cache.temporary|bool_to_str }}>,
-              gridtools::array<int, 3> const& offsets) noexcept {
+          GT_FUNCTION_DEVICE {{ ij_cache.type }}& resolve(helpers::arg_identifier<{{ ij_cache.id }}, {{ ij_cache.temporary|bool_to_str }}>,
+              gt::array<int, 3> const& offsets) noexcept {
               return *(ij_caches_.arg_{{ 'tmp_' if ij_cache.temporary }}{{ ij_cache.id }}_ +
                        ij_caches_.get_offset(offsets[0], offsets[1], offsets[2]));
           }
@@ -328,8 +328,8 @@
 
       // resolve for k caches
       {%- for k_cache in multistage["k_caches"] %}
-        GT_FUNCTION_DEVICE {{ k_cache.type }} resolve(gridtools::gt_gen_helpers::arg_identifier<{{ k_cache.id }}, {{ k_cache.temporary|bool_to_str }}>,
-            gridtools::array<int, 3> const& offsets) const noexcept {
+        GT_FUNCTION_DEVICE {{ k_cache.type }} resolve(helpers::arg_identifier<{{ k_cache.id }}, {{ k_cache.temporary|bool_to_str }}>,
+            gt::array<int, 3> const& offsets) const noexcept {
             static constexpr const int kcache_start = {{ k_cache.min_extent }};
             static constexpr const int kcache_end = {{ k_cache.max_extent }};
             assert(offsets[0] == 0);
@@ -339,8 +339,8 @@
             return k_caches_.arg_{{ 'tmp_' if k_cache.temporary }}{{ k_cache.id }}_[-kcache_start + offsets[2]];
         }
         {%- if not k_cache.readonly %}
-          GT_FUNCTION_DEVICE {{ k_cache.type }}& resolve(gridtools::gt_gen_helpers::arg_identifier<{{ k_cache.id }}, {{ k_cache.temporary|bool_to_str }}>,
-              gridtools::array<int, 3> const& offsets) noexcept {
+          GT_FUNCTION_DEVICE {{ k_cache.type }}& resolve(helpers::arg_identifier<{{ k_cache.id }}, {{ k_cache.temporary|bool_to_str }}>,
+              gt::array<int, 3> const& offsets) noexcept {
               static constexpr const int kcache_start = {{ k_cache.min_extent }};
               static constexpr const int kcache_end = {{ k_cache.max_extent }};
               assert(offsets[0] == 0);

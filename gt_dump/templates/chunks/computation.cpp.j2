@@ -1,3 +1,5 @@
+// vi:syntax=cpp
+
 template<typename Grid>
 struct generated_computation {
     // all temporary arguments (origin points to allocation, non-origin points to compute domain)
@@ -15,8 +17,8 @@ struct generated_computation {
     void run(
         {%- set comma = joiner(", ") -%}
         {%- for kind_id, kind_info in context.kinds|dictsort %}
-          {{- comma() }} const gridtools::array<int, {{ kind_info.layout|reject("equalto", -1)|list|length }}>& strides_{{ kind_id }}
-          {{- comma() }} const gridtools::array<int, {{ kind_info.layout|reject("equalto", -1)|list|length }}>& dims_{{ kind_id }}
+          {{- comma() }} const gt::array<int, {{ kind_info.layout|reject("equalto", -1)|list|length }}>& strides_{{ kind_id }}
+          {{- comma() }} const gt::array<int, {{ kind_info.layout|reject("equalto", -1)|list|length }}>& dims_{{ kind_id }}
         {%- endfor %}
         {%- for arg_id, arg_info in context.args|dictsort %}
             {{- comma() }} {{- arg_info.type }}{{ ' const' if arg_info.read_only }} *ptr_{{ arg_id }}
@@ -28,14 +30,14 @@ generated_computation<Grid>::generated_computation(Grid const& grid)
 
     static constexpr int alignment = 128 / sizeof(double);
 
-    gridtools::uint_t const nx = grid_.i_high_bound() - grid_.i_low_bound() + 1;
-    gridtools::uint_t const ny = grid_.j_high_bound() - grid_.j_low_bound() + 1;
+    gt::uint_t const nx = grid_.i_high_bound() - grid_.i_low_bound() + 1;
+    gt::uint_t const ny = grid_.j_high_bound() - grid_.j_low_bound() + 1;
 
-    gridtools::uint_t const num_blocks_i = (nx + gen::block_i_size - 1) / gen::block_i_size;
-    gridtools::uint_t const num_blocks_j = (ny + gen::block_j_size - 1) / gen::block_j_size;
+    gt::uint_t const num_blocks_i = (nx + helpers::block_i_size - 1) / helpers::block_i_size;
+    gt::uint_t const num_blocks_j = (ny + helpers::block_j_size - 1) / helpers::block_j_size;
 
-    static constexpr const int i_padded_length = get_blocked_i_padded_length<computation_info::max_arg_extent>::value;
-    static constexpr const int j_padded_length = get_blocked_j_padded_length<computation_info::max_arg_extent>::value;
+    static constexpr const int i_padded_length = helpers::get_blocked_i_padded_length<computation_info::max_arg_extent>::value;
+    static constexpr const int j_padded_length = helpers::get_blocked_j_padded_length<computation_info::max_arg_extent>::value;
 
     int const k_padded_length = grid_.k_total_length();
     {% for arg_id, arg_info in context.temporaries|dictsort %}
@@ -98,8 +100,8 @@ template<typename Grid>
 void generated_computation<Grid>::run(
         {%- set comma = joiner(", ") -%}
         {%- for kind_id, kind_info in context.kinds|dictsort %}
-          {{- comma() }} const gridtools::array<int, {{ kind_info.layout|reject("equalto", -1)|list|length }}>& strides_{{ kind_id }}
-          {{- comma() }} const gridtools::array<int, {{ kind_info.layout|reject("equalto", -1)|list|length }}>& dims_{{ kind_id }}
+          {{- comma() }} const gt::array<int, {{ kind_info.layout|reject("equalto", -1)|list|length }}>& strides_{{ kind_id }}
+          {{- comma() }} const gt::array<int, {{ kind_info.layout|reject("equalto", -1)|list|length }}>& dims_{{ kind_id }}
         {%- endfor %}
         {%- for arg_id, arg_info in context.args|dictsort %}
           {{- comma() }} {{ arg_info.type }}{{ ' const' if arg_info.read_only }} *ptr_{{ arg_id }}
