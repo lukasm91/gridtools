@@ -71,12 +71,12 @@ endfunction()
 function(gt_use_dumped_data target)
 
     target_compile_definitions(${target}  PRIVATE GT_DUMP_DATA_FOLDER=${GT_DUMP_DATA_FOLDER})
-    target_include_directories(${target}  PUBLIC ${PROJECT_SOURCE_DIR}/gt_dump)
+    target_include_directories(${target}  PUBLIC ${GT_DUMP_SOURCE_DIR})
     target_link_libraries(${target} stdc++fs)
 
     if (GT_DUMP_GENERATE_DATA)
         target_compile_definitions(${target} PRIVATE GT_DUMP_GENERATE_DATA)
-        target_link_libraries(${target} gt_dump_interface)
+        target_link_libraries(${target} GridTools::gt_dump_interface)
     else()
         get_target_property(target_sources ${target} SOURCES)
         foreach(source ${target_sources})
@@ -87,7 +87,7 @@ function(gt_use_dumped_data target)
             gt_copy_target(${target}_${source_name_we} ${target})
             target_sources(${target}_${source_name_we} PRIVATE ${source})
 
-            file(GLOB_RECURSE template_files CONFIGURE_DEPENDS ${PROJECT_SOURCE_DIR}/gt_dump/templates/* )
+            file(GLOB_RECURSE template_files CONFIGURE_DEPENDS ${GT_DUMP_SOURCE_DIR}/templates/* )
 
             file(GLOB generated_files RELATIVE ${CMAKE_CURRENT_LIST_DIR} CONFIGURE_DEPENDS ${GT_DUMP_DATA_FOLDER}/${prefix}*)
             foreach(generated_file_source ${generated_files})
@@ -99,15 +99,15 @@ function(gt_use_dumped_data target)
                 add_custom_command(OUTPUT ${generated_file}
                     COMMAND mkdir -p ${GT_DUMP_DATA_FOLDER}/generated/
                     COMMAND ${CMAKE_COMMAND} -E env PYTHONPATH="${interface_py_dir}"
-                        python ${PROJECT_SOURCE_DIR}/gt_dump/generate_code.py ${generated_file_source_path} ${generated_file}
+                        python ${GT_DUMP_SOURCE_DIR}/generate_code.py ${generated_file_source_path} ${generated_file}
                     COMMENT "Generate ${generated_file}"
                     MAIN_DEPENDENCY ${generated_file_source}
                     DEPENDS
-                        ${PROJECT_SOURCE_DIR}/gt_dump/generate_code.py
+                    ${GT_DUMP_SOURCE_DIR}/generate_code.py
                         ${template_files}
                         ${generated_file_source_path}
                         gt_dump_python
-                        ${PROJECT_SOURCE_DIR}/gt_dump/proto/interface.proto
+                        ${GT_DUMP_SOURCE_DIR}/proto/interface.proto
                     )
                 # we need to manually add this dependency because this include is dependent on a macro define which
                 # CMake cannot resolve

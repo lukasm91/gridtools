@@ -39,12 +39,12 @@ if (COMPONENT_GCL)
       RUNTIME DESTINATION bin
       INCLUDES DESTINATION include
     )
-    export(TARGETS gridtools gcl
+    export(TARGETS gridtools gcl gt_dump_interface
         FILE ${PROJECT_BINARY_DIR}/GridToolsTargets.cmake
         NAMESPACE GridTools::
     )
 else()
-    export(TARGETS gridtools
+    export(TARGETS gridtools gt_dump_interface
         FILE ${PROJECT_BINARY_DIR}/GridToolsTargets.cmake
         NAMESPACE GridTools::
     )
@@ -75,6 +75,7 @@ set(CMAKE_SOURCES
     "${PROJECT_SOURCE_DIR}/cmake/fortran_helpers.cmake"
     "${PROJECT_SOURCE_DIR}/cmake/workaround_mpi.cmake"
     "${PROJECT_SOURCE_DIR}/cmake/workaround_check_language.cmake"
+    "${PROJECT_SOURCE_DIR}/cmake/gt_gen.cmake"
     "${PROJECT_BINARY_DIR}${CMAKE_FILES_DIRECTORY}/build-install/lib/cmake/gt_bindings.cmake"
     )
 set(CBINDINGS_SOURCES

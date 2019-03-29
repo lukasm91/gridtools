@@ -8,6 +8,8 @@ unset(__GT_VERSION)
 list (APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_LIST_DIR}/cmake")
 set(BUILD_SHARED_LIBS OFF)
 
+set(GT_DUMP_SOURCE_DIR "${CMAKE_CURRENT_LIST_DIR}/gt_dump")
+
 include(CTest)
 
 # ===============
