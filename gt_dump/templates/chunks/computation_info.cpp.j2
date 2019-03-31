@@ -1,5 +1,3 @@
-// vi:syntax=cpp
-
 {%- for multistage in context.multistages %}
   struct multistage_{{ multistage.id }}_info {
       {%- for independent_stage_list in multistage.stages %}

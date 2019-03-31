@@ -17,9 +17,10 @@
 #endif
 
 #ifndef GT_DUMP_IDENTIFIER
-#define GT_DUMP_IDENTIFIER(name)                                  \
-    (std::string(BOOST_PP_STRINGIZE(GT_DUMP_DATA_FOLDER)) + "/" + \
-        boost::replace_all_copy(std::string(__BASE_FILE__ "__" #name), "/", "_"))
+#define GT_DUMP_IDENTIFIER(name)                                                                    \
+    (std::string(#name) == "NO_DUMP" ? ""                                                           \
+                                     : std::string(BOOST_PP_STRINGIZE(GT_DUMP_DATA_FOLDER)) + "/" + \
+                                           boost::replace_all_copy(std::string(__BASE_FILE__ "__" #name), "/", "_"))
 #endif
 
 namespace gridtools {
@@ -249,6 +250,8 @@ namespace gridtools {
         template <bool IsStateful, class Backend, class Grid, class ArgStoragePairs, class Msses>
         struct dump_intermediate<intermediate<IsStateful, Backend, Grid, ArgStoragePairs, Msses>> {
             void operator()(const std::string &filename) const {
+                if (filename == "")
+                    return;
                 std::experimental::filesystem::create_directory(
                     std::experimental::filesystem::path(filename).parent_path());
                 std::ofstream of(filename, std::ios::out | std::ios::binary | std::ios::trunc);

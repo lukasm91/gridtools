@@ -97,7 +97,7 @@ namespace gridtools {
             template <typename T>
             void operator()(T &&storage_pair) const {
                 const auto &storage = storage_pair.m_value;
-                storage.sync();
+                // storage.sync();
             }
         };
 

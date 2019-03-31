@@ -1,5 +1,3 @@
-// vi:syntax=cpp
-
 {%- for multistage in context.multistages %}
   class multistage_{{ multistage.id }}_ptrs {
   {%- if multistage|has_kcaches %}
@@ -14,22 +12,6 @@
 
   {%- endif %}
     public:
-      {%- if multistage.ij_caches|length > 0 %}
-        struct ij_caches {
-            {%- for ij_cache in multistage.ij_caches %}
-              {{ ij_cache.type }}* arg_{{ 'tmp_' if ij_cache.temporary }}{{ ij_cache.id }}_ = nullptr;
-            {%- endfor %}
-            GT_FUNCTION int get_offset(int i, int j, int k) const noexcept {
-                assert(k == 0);
-                return i * i_stride_ + j * j_stride_;
-            }
-            static constexpr int i_stride_ = 1;
-            static constexpr int j_stride_ = helpers::block_i_size +
-                                                 -multistage_{{ multistage.id }}_info::max_stage_extent::iminus() +
-                                                 multistage_{{ multistage.id }}_info::max_stage_extent::iplus();
-        } ij_caches_;
-      {%- endif %}
-
       {%- for kind_id, kind_info in multistage["kinds"]|dictsort %}
         struct kind_{{ kind_id }}_fields {
             kind_{{ kind_id }}_fields(kind_{{ kind_id }}_info const& si) noexcept : si_(si) {}
@@ -299,32 +281,6 @@
                     + kind_tmp_{{ arg_id }}_fields_.si_.get_offset(offsets[0], offsets[1], offsets[2]));
             }
           {%- endif %}
-        {%- endif %}
-      {%- endfor %}
-
-      // resolve for global arguments (TODO)
-      {#
-      {%- for arg_id, arg_info in multistage.globals|dictsort %}
-        GT_FUNCTION_DEVICE {{ arg_info.type }} resolve(std::integral_constant<unsigned, {{ arg_id }}>,
-            gt::array<int, 3> const& offsets) const noexcept {
-            return {}; // TODO
-        }
-      {%- endfor %}
-      #}
-
-      // resolve for ij caches
-      {%- for ij_cache in multistage["ij_caches"] %}
-        GT_FUNCTION_DEVICE {{ ij_cache.type }} resolve(helpers::arg_identifier<{{ ij_cache.id }}, {{ ij_cache.temporary|bool_to_str }}>,
-            gt::array<int, 3> const& offsets) const noexcept {
-            return *(ij_caches_.arg_{{ 'tmp_' if ij_cache.temporary }}{{ ij_cache.id }}_ +
-                     ij_caches_.get_offset(offsets[0], offsets[1], offsets[2]));
-        }
-        {%- if not ij_cache.readonly %}
-          GT_FUNCTION_DEVICE {{ ij_cache.type }}& resolve(helpers::arg_identifier<{{ ij_cache.id }}, {{ ij_cache.temporary|bool_to_str }}>,
-              gt::array<int, 3> const& offsets) noexcept {
-              return *(ij_caches_.arg_{{ 'tmp_' if ij_cache.temporary }}{{ ij_cache.id }}_ +
-                       ij_caches_.get_offset(offsets[0], offsets[1], offsets[2]));
-          }
         {%- endif %}
       {%- endfor %}
 

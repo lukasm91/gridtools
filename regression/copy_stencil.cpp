@@ -23,7 +23,7 @@ struct copy_functor {
 
     template <typename Evaluation>
     GT_FUNCTION static void apply(Evaluation eval) {
-        eval(out()) = eval(in());
+        eval(out()) = 2 * eval(in());
     }
 };
 
@@ -34,15 +34,38 @@ struct copy_stencil : regression_fixture<0> {
 
 #include GT_DUMP_GENERATED_CODE(test)
 
+#define GT
+#define GEN
+
+#ifdef GEN
 TEST_F(copy_stencil, test) {
     tmp_arg<0> p_tmp;
     auto comp = make_computation(GT_DUMP_IDENTIFIER(test),
         p_0 = in,
         p_1 = out,
-        make_multistage(
-            execute::parallel(), make_stage<copy_functor>(p_0, p_tmp), make_stage<copy_functor>(p_tmp, p_1)));
+        make_multistage(execute::parallel(),
+            define_caches(cache<cache_type::ij, cache_io_policy::local>(p_tmp)),
+            make_stage<copy_functor>(p_0, p_tmp),
+            make_stage<copy_functor>(p_tmp, p_1)));
 
     comp.run();
-    verify(in, out);
+    verify(make_storage([](int i, int j, int k) { return 4 * (i + j + k); }), out);
     benchmark(comp);
 }
+#endif
+#ifdef GT
+TEST_F(copy_stencil, test_gt) {
+    tmp_arg<0> p_tmp;
+    auto comp = make_computation(GT_DUMP_IDENTIFIER(NO_DUMP),
+        p_0 = in,
+        p_1 = out,
+        make_multistage(execute::parallel(),
+            define_caches(cache<cache_type::ij, cache_io_policy::local>(p_tmp)),
+            make_stage<copy_functor>(p_0, p_tmp),
+            make_stage<copy_functor>(p_tmp, p_1)));
+
+    comp.run();
+    verify(make_storage([](int i, int j, int k) { return 4 * (i + j + k); }), out);
+    benchmark(comp);
+}
+#endif

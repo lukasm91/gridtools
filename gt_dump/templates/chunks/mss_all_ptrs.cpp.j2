@@ -1,0 +1,38 @@
+{%- for multistage in context.multistages %}
+  struct multistage_{{ multistage.id }}_all_ptrs {
+
+      // forward all but ij caches
+      template <uint_t Id, bool Temporary>
+      GT_FUNCTION_DEVICE double resolve(helpers::arg_identifier<Id, Temporary>, gt::array<int, 3> const &offsets) const {
+          return ptrs_.resolve(helpers::arg_identifier<Id, Temporary>{}, offsets);
+      }
+      template <uint_t Id, bool Temporary>
+      GT_FUNCTION_DEVICE double& resolve(helpers::arg_identifier<Id, Temporary>, gt::array<int, 3> const &offsets) {
+          return ptrs_.resolve(helpers::arg_identifier<Id, Temporary>{}, offsets);
+      }
+
+      // resolve for ij caches
+      {%- for ij_cache in multistage["ij_caches"] %}
+        GT_FUNCTION_DEVICE {{ ij_cache.type }} resolve(helpers::arg_identifier<{{ ij_cache.id }}, {{ ij_cache.temporary|bool_to_str }}>,
+            gt::array<int, 3> const& offsets) const noexcept {
+            return *(ij_caches_.arg_{{ 'tmp_' if ij_cache.temporary }}{{ ij_cache.id }}(iblock, jblock) +
+                     ij_caches_.get_offset(offsets[0], offsets[1], offsets[2]));
+        }
+        {%- if not ij_cache.readonly %}
+          GT_FUNCTION_DEVICE {{ ij_cache.type }}& resolve(helpers::arg_identifier<{{ ij_cache.id }}, {{ ij_cache.temporary|bool_to_str }}>,
+              gt::array<int, 3> const& offsets) noexcept {
+              return *(ij_caches_.arg_{{ 'tmp_' if ij_cache.temporary }}{{ ij_cache.id }}(iblock, jblock) +
+                       ij_caches_.get_offset(offsets[0], offsets[1], offsets[2]));
+          }
+        {%- endif %}
+      {%- endfor %}
+
+      multistage_{{ multistage.id }}_ptrs& ptrs_;
+      {%- if multistage.ij_caches|length > 0 %}
+        multistage_{{ multistage.id }}_ij_caches & ij_caches_;
+      {%- endif %}
+
+      int const iblock;
+      int const jblock;
+  };
+{%- endfor %}

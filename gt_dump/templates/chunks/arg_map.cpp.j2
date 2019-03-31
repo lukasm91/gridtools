@@ -1,17 +1,14 @@
-// vi:syntax=cpp
-
 {%- for multistage in context.multistages %}
   {%- set arguments = context.arguments %}
   {%- for independent_stage_list in multistage.stages %}
     {%- for stage in independent_stage_list %}
       struct {{ stage.argmap_name }} {
-      {%- for mapper in stage.argmap %}
-        {%- set arg_id = mapper.arg[1] %}
-        {%- set temporary = (mapper.arg[0] == 'temporary')|bool_to_str %}
-        template <gt::intent Intent, typename Extent, size_t Number>
-        GT_FUNCTION constexpr helpers::arg_identifier<{{ arg_id }}, {{ temporary }}>
-        operator()(gt::accessor<{{ mapper.accessor }}, Intent, Extent, Number>) const;
-      {%- endfor %}
+          {%- for mapper in stage.argmap %}
+            {%- set temporary = (mapper.arg.type == 'temporary')|bool_to_str %}
+            template <gt::intent Intent, typename Extent, size_t Number>
+            GT_FUNCTION constexpr helpers::arg_identifier<{{ mapper.arg.id }}, {{ temporary }}>
+            operator()(gt::accessor<{{ mapper.accessor }}, Intent, Extent, Number>) const;
+          {%- endfor %}
       };
     {%- endfor %}
   {%- endfor %}

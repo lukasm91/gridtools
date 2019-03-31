@@ -80,6 +80,10 @@ using horizontal_diffusion = regression_fixture<2>;
 
 #include GT_DUMP_GENERATED_CODE(test)
 
+#define GT
+#define GEN
+
+#ifdef GEN
 TEST_F(horizontal_diffusion, test) {
     tmp_arg<0> p_lap;
     tmp_arg<1> p_flx;
@@ -96,7 +100,7 @@ TEST_F(horizontal_diffusion, test) {
         p_in = make_storage(repo.in),
         p_out = out,
         p_coeff = make_storage(repo.coeff),
-        make_multistage(execute::parallel(),
+        make_multistage(execute::forward(),
             define_caches(cache<cache_type::ij, cache_io_policy::local>(p_lap, p_flx, p_fly)),
             make_stage<lap_function>(p_lap, p_in),
             make_independent(
@@ -107,3 +111,34 @@ TEST_F(horizontal_diffusion, test) {
     verify(make_storage(repo.out), out);
     benchmark(comp);
 }
+#endif
+
+#ifdef GT
+TEST_F(horizontal_diffusion, test_gt) {
+    tmp_arg<0> p_lap;
+    tmp_arg<1> p_flx;
+    tmp_arg<2> p_fly;
+    arg<3> p_coeff;
+    arg<4> p_in;
+    arg<5> p_out;
+
+    auto out = make_storage();
+
+    horizontal_diffusion_repository repo(d1(), d2(), d3());
+
+    auto comp = make_computation(GT_DUMP_IDENTIFIER(NO_DUMP),
+        p_in = make_storage(repo.in),
+        p_out = out,
+        p_coeff = make_storage(repo.coeff),
+        make_multistage(execute::forward(),
+            define_caches(cache<cache_type::ij, cache_io_policy::local>(p_lap, p_flx, p_fly)),
+            make_stage<lap_function>(p_lap, p_in),
+            make_independent(
+                make_stage<flx_function>(p_flx, p_in, p_lap), make_stage<fly_function>(p_fly, p_in, p_lap)),
+            make_stage<out_function>(p_out, p_in, p_flx, p_fly, p_coeff)));
+
+    comp.run();
+    verify(make_storage(repo.out), out);
+    benchmark(comp);
+}
+#endif

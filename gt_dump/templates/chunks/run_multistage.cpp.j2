@@ -1,5 +1,3 @@
-// vi:syntax=cpp
-
 {%- for multistage in context.multistages %}
   template <typename Grid>
   void run_multistage_{{ multistage.id }}(multistage_{{ multistage.id }}_ptrs const& ptrs, Grid const& grid) {
@@ -9,7 +7,9 @@
 
       gt::uint_t const nx = grid.i_high_bound() - grid.i_low_bound() + 1;
       gt::uint_t const ny = grid.j_high_bound() - grid.j_low_bound() + 1;
+      {%- if multistage.direction == "parallel" %}
       gt::uint_t const nz = grid.k_total_length();
+      {%- endif %}
 
       static constexpr int jplus_warps = mss_info::max_stage_extent::jplus();
       static constexpr int jminus_warps = -mss_info::max_stage_extent::jminus();
@@ -21,14 +21,18 @@
 
       gt::uint_t const num_blocks_i = (nx + helpers::block_i_size - 1) / helpers::block_i_size;
       gt::uint_t const num_blocks_j = (ny + helpers::block_j_size - 1) / helpers::block_j_size;
-      gt::uint_t const num_blocks_k = 1;
+      {%- if multistage.direction == "parallel" %}
+        gt::uint_t const num_blocks_k = (nz + {{ multistage.blocksize }} - 1) / {{ multistage.blocksize }};
+      {%- else %}
+        gt::uint_t const num_blocks_k = 1;
+      {%- endif %}
 
       dim3 blocks{num_blocks_i, num_blocks_j, num_blocks_k};
 
   #ifdef __CUDACC__
       {{ multistage.launch_kernel }}<<<blocks, threads>>>(ptrs, grid);
   #else
-      {{ multistage.launcH_kernel }}(ptrs, grid);
+      {{ multistage.launch_kernel }}(ptrs, grid);
   #endif
   #ifndef NDEBUG
       if (cudaDeviceSynchronize() != cudaSuccess)

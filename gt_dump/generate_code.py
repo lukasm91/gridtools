@@ -83,9 +83,11 @@ def message_to_level(l):
 def message_to_interval(i):
     return Interval(message_to_level(i.begin), message_to_level(i.end))
 
+
 # replaces some chars that are not supported in identifier
 def to_identifier(name):
     return re.sub(r"[()<>:]", "_", name)
+
 
 def merge_dicts(f, A, B):
     return {
@@ -182,7 +184,9 @@ class Generator:
 
     @staticmethod
     def _make_argmap_name(id_mss, id_d, id_i, stage_name):
-        return "arg_map_{}_{}_{}_{}".format(id_mss, id_d, id_i, to_identifier(stage_name))
+        return "arg_map_{}_{}_{}_{}".format(
+            id_mss, id_d, id_i, to_identifier(stage_name)
+        )
 
     @staticmethod
     def _make_intervals(mss_id, mss, stage_info):
@@ -208,7 +212,12 @@ class Generator:
                         {
                             "name": Generator._restore_stage_name(stage_ref.name),
                             "id": Generator._make_stage_id(id_d, id_i),
-                            "argmap_name": Generator._make_argmap_name(mss_id, id_d, id_i, Generator._restore_stage_name(stage_ref.name)),
+                            "argmap_name": Generator._make_argmap_name(
+                                mss_id,
+                                id_d,
+                                id_i,
+                                Generator._restore_stage_name(stage_ref.name),
+                            ),
                             "overload": (
                                 message_to_interval(i.interval)
                                 if i.overload == interface_pb2.StageInterval.INTERVAL
@@ -316,17 +325,20 @@ class Generator:
                     else "parallel"
                 )
             ),
+            "blocksize": 20 if mss.policy == interface_pb2.Multistage.PARALLEL else None,
             "stages": [
                 [
                     {
                         "stage_extent": stage_extent,
                         "name": stage_ref.name.replace("(anonymous namespace)::", ""),
                         "id": Generator._make_stage_id(id_d, id_i),
-                        "argmap_name": Generator._make_argmap_name(mss_id, id_d, id_i, stage_ref.name),
+                        "argmap_name": Generator._make_argmap_name(
+                            mss_id, id_d, id_i, stage_ref.name
+                        ),
                         "argmap": [
                             {
                                 "accessor": accessor.id,
-                                "arg": (Generator._arg_type(arg), arg.id),
+                                "arg": {"type": Generator._arg_type(arg), "id": arg.id},
                             }
                             for arg, accessor in zip(
                                 stage_ref.args,

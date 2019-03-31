@@ -1,5 +1,3 @@
-// vi:syntax=cpp
-
 namespace gridtools {
     #define GT_DUMP_IDENTIFIER_{{ context.name }} {{ context.hash }}
 
@@ -66,14 +64,16 @@ namespace gridtools {
 
       public:
         generated_computation(Grid const& grid, std::tuple<arg_storage_pair<BoundPlaceholders, BoundDataStores>...>&& storages)
-            : computation_(grid), storage_pairs_(storages) {
+            : computation_(grid), storage_pairs_(storages), m_meter("NONAME") {
             ptrs_.assign(std::move(storages));
         }
 
         template <typename... Args, typename... DataStores>
         void run(arg_storage_pair<Args, DataStores> const&... srcs) {
+
             tuple_util::for_each(gt_gen_helpers::make_view_f{}, std::make_tuple(srcs...));
             tuple_util::for_each(gt_gen_helpers::make_view_f{}, storage_pairs_);
+            m_meter.start();
             computation_.run(
                 {%- set comma = joiner(", ") -%}
                 {%- for kind_id, kind_info in context.kinds|dictsort %}
@@ -83,15 +83,20 @@ namespace gridtools {
                 {%- for arg_id, arg_info in context.args|dictsort() %}
                   {{- comma() }} get_arg<{{ arg_id }}>(srcs...)
                 {%- endfor %});
+            m_meter.pause();
             tuple_util::for_each(gt_gen_helpers::sync_f{}, std::make_tuple(srcs...));
             tuple_util::for_each(gt_gen_helpers::sync_f{}, storage_pairs_);
+
         }
-        void reset_meter() {}
-        std::string print_meter() const { return ""; }
+        void reset_meter() { m_meter.reset(); }
+        std::string print_meter() const { return m_meter.to_string(); }
 
       private:
         gen_{{ context.name }}_{{ context.hash }}::generated_computation<Grid> computation_;
         StaticPtrsType ptrs_;
         bound_arg_storage_pairs storage_pairs_; // this would not belong in here, but that's an ugly interface which is fine...
+
+        using performance_meter_t = typename timer_traits<backend::cuda>::timer_type;
+        performance_meter_t m_meter;
     };
 }
