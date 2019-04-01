@@ -46,10 +46,12 @@
       {%- endif %}
       ptrs.increment_k(min_level);
 
-      if (helpers::in_domain<mss_info::max_stage_extent>(iblock, jblock, current_block_i_size, current_block_j_size))
-          ptrs.init_caches();
+      {% if multistage.k_caches|length > 0 -%}
+        if (helpers::in_domain<mss_info::max_stage_extent>(iblock, jblock, current_block_i_size, current_block_j_size))
+            ptrs.init_caches();
+      {%- endif %}
 
-      {%- for interval in (multistage.intervals if multistage.direction != "backward" else multistage.intervals|reverse) %}
+      {%for interval in (multistage.intervals if multistage.direction != "backward" else multistage.intervals|reverse) %}
         {
             using from_level = gt::level<{{ interval.interval[0][0] }}, {{ interval.interval[0][1] }}, OffsetLimit>;
             using to_level = gt::level<{{ interval.interval[1][0] }}, {{ interval.interval[1][1] }}, OffsetLimit>;
@@ -65,8 +67,10 @@
                   __shared__ multistage_{{ multistage.id }}_ij_caches ij_caches;
                 {%- endif %}
 
-                if (helpers::in_domain<mss_info::max_stage_extent>(iblock, jblock, current_block_i_size, current_block_j_size))
-                    ptrs.fill_caches();
+                {%- if multistage.k_caches|length > 0 %}
+                  if (helpers::in_domain<mss_info::max_stage_extent>(iblock, jblock, current_block_i_size, current_block_j_size))
+                      ptrs.fill_caches();
+                {%- endif %}
 
                 {% for independent_stage_list in interval.stages %}
                   {%- if not loop.first %}
@@ -95,8 +99,10 @@
                   {%- endfor %}
                 {%- endfor %}
 
-                if (helpers::in_domain<mss_info::max_stage_extent>(iblock, jblock, current_block_i_size, current_block_j_size))
-                    ptrs.flush_caches();
+                {% if multistage.k_caches|length > 0 %}
+                  if (helpers::in_domain<mss_info::max_stage_extent>(iblock, jblock, current_block_i_size, current_block_j_size))
+                      ptrs.flush_caches();
+                {%- endif %}
 
                 {%- if multistage.ij_caches and multistage.ij_caches|length > 0 %}
                   __syncthreads(); // needed because we have an ij cache
@@ -105,7 +111,9 @@
         }
       {%- endfor %}
 
-      if (helpers::in_domain<mss_info::max_stage_extent>(iblock, jblock, current_block_i_size, current_block_j_size))
-          ptrs.terminate_caches();
+      {% if multistage.k_caches|length > 0 %}
+        if (helpers::in_domain<mss_info::max_stage_extent>(iblock, jblock, current_block_i_size, current_block_j_size))
+            ptrs.terminate_caches();
+      {%- endif %}
   }
 {%- endfor %}
