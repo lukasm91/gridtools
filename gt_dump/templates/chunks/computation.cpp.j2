@@ -2,9 +2,11 @@ template<typename Grid>
 struct generated_computation {
     // all temporary arguments (origin points to allocation, non-origin points to compute domain)
     {%- for arg_id, arg_info in context.temporaries|dictsort %}
-      kind_tmp_{{ arg_id }}_info kind_tmp_{{ arg_id }}_;
-      {{ arg_info.type }}* ptr_tmp_{{ arg_id }}_ = nullptr;
-      {{ arg_info.type }}* ptr_tmp_{{ arg_id }}_origin_ = nullptr;
+      {%- if not arg_info.local %}
+        kind_tmp_{{ arg_id }}_info kind_tmp_{{ arg_id }}_;
+        {{ arg_info.type }}* ptr_tmp_{{ arg_id }}_ = nullptr;
+        {{ arg_info.type }}* ptr_tmp_{{ arg_id }}_origin_ = nullptr;
+      {%- endif %}
     {%- endfor %}
 
     Grid grid_;
@@ -40,30 +42,32 @@ generated_computation<Grid>::generated_computation(Grid const& grid)
     int const k_padded_length = grid_.k_total_length();
     {% for arg_id, arg_info in context.temporaries|dictsort %}
       {%- set comma = joiner(", ") %}
-      kind_tmp_{{ arg_id }}_ = {
-          {%- if not arg_info|masked(0) %}
-            {{- comma() -}}
-            (int)i_padded_length *
-            {{- '(int)j_padded_length * ' if not arg_info|masked(1) }}
-            {{- '(int)k_padded_length * ' if not arg_info|masked(2) }}
-            1
-          {%- endif %}
-          {%- if not arg_info|masked(1) %}
-            {{- comma() -}}
-            {{- '(int)i_padded_length * ' if not arg_info|masked(0) }}
-            (int)j_padded_length *
-            {{- '(int)k_padded_length * ' if not arg_info|masked(2) }}
-            {{- '(int)num_blocks_i * ' if not arg_info|masked(0) }}
-            1
-          {%- endif -%}
-          {{- comma() -}}
-          {{- '(int)i_padded_length * ' if not arg_info|masked(0) }}
-          {{- '(int)j_padded_length * ' if not arg_info|masked(1) }}
-          {{- '(int)k_padded_length * ' if not arg_info|masked(2) }}
-          {{- '(int)num_blocks_i * ' if not arg_info|masked(0) }}
-          {{- '(int)num_blocks_j * ' if not arg_info|masked(0) }}
-          1
-      };
+      {%- if not arg_info.local %}
+          kind_tmp_{{ arg_id }}_ = {
+              {%- if not arg_info|masked(0) %}
+                {{- comma() -}}
+                (int)i_padded_length *
+                {{- '(int)j_padded_length * ' if not arg_info|masked(1) }}
+                {{- '(int)k_padded_length * ' if not arg_info|masked(2) }}
+                1
+              {%- endif %}
+              {%- if not arg_info|masked(1) %}
+                {{- comma() -}}
+                {{- '(int)i_padded_length * ' if not arg_info|masked(0) }}
+                (int)j_padded_length *
+                {{- '(int)k_padded_length * ' if not arg_info|masked(2) }}
+                {{- '(int)num_blocks_i * ' if not arg_info|masked(0) }}
+                1
+              {%- endif -%}
+              {{- comma() -}}
+              {{- '(int)i_padded_length * ' if not arg_info|masked(0) }}
+              {{- '(int)j_padded_length * ' if not arg_info|masked(1) }}
+              {{- '(int)k_padded_length * ' if not arg_info|masked(2) }}
+              {{- '(int)num_blocks_i * ' if not arg_info|masked(0) }}
+              {{- '(int)num_blocks_j * ' if not arg_info|masked(0) }}
+              1
+          };
+      {%- endif %}
     {%- endfor %}
 
     auto const initial_i_offset = (-computation_info::max_arg_extent::iminus() + alignment - 1) / alignment * alignment;
