@@ -46,10 +46,7 @@
       {%- endif %}
       ptrs.increment_k(min_level);
 
-      if (iblock >= mss_info::max_stage_extent::iminus() &&
-          iblock < current_block_i_size + mss_info::max_stage_extent::iplus() &&
-          jblock >= mss_info::max_stage_extent::jminus() &&
-          jblock < current_block_j_size + mss_info::max_stage_extent::jplus())
+      if (helpers::in_domain<mss_info::max_stage_extent>(iblock, jblock, current_block_i_size, current_block_j_size))
           ptrs.init_caches();
 
       {%- for interval in (multistage.intervals if multistage.direction != "backward" else multistage.intervals|reverse) %}
@@ -68,23 +65,17 @@
                   __shared__ multistage_{{ multistage.id }}_ij_caches ij_caches;
                 {%- endif %}
 
-                if (iblock >= mss_info::max_stage_extent::iminus() &&
-                    iblock < current_block_i_size + mss_info::max_stage_extent::iplus() &&
-                    jblock >= mss_info::max_stage_extent::jminus() &&
-                    jblock < current_block_j_size + mss_info::max_stage_extent::jplus())
+                if (helpers::in_domain<mss_info::max_stage_extent>(iblock, jblock, current_block_i_size, current_block_j_size))
                     ptrs.fill_caches();
 
-                {%- for independent_stage_list in interval.stages %}
+                {% for independent_stage_list in interval.stages %}
                   {%- if not loop.first %}
                     __syncthreads();
                   {%- endif %}
                   {%- for interval_stage in independent_stage_list %}
                     using stage_{{ interval_stage.id }}_extent =
                         multistage_{{ multistage.id }}_info::stage_{{ interval_stage.id }}_{{ interval_stage.name|to_identifier }}::stage_extent;
-                    if (iblock >= stage_{{ interval_stage.id }}_extent::iminus()
-                        && iblock < current_block_i_size + stage_{{ interval_stage.id }}_extent::iplus()
-                        && jblock >= stage_{{ interval_stage.id }}_extent::jminus()
-                        && jblock < current_block_j_size + stage_{{ interval_stage.id }}_extent::jplus()) {
+                    if (helpers::in_domain<stage_{{ interval_stage.id }}_extent>(iblock, jblock, current_block_i_size, current_block_j_size)) {
 
                         {%- if multistage.ij_caches|length > 0 %}
                           multistage_{{ multistage.id }}_all_ptrs all_ptrs{ptrs, ij_caches, iblock, jblock};
@@ -104,10 +95,7 @@
                   {%- endfor %}
                 {%- endfor %}
 
-                if (iblock >= mss_info::max_stage_extent::iminus() &&
-                    iblock < current_block_i_size + mss_info::max_stage_extent::iplus() &&
-                    jblock >= mss_info::max_stage_extent::jminus() &&
-                    jblock < current_block_j_size + mss_info::max_stage_extent::jplus())
+                if (helpers::in_domain<mss_info::max_stage_extent>(iblock, jblock, current_block_i_size, current_block_j_size))
                     ptrs.flush_caches();
 
                 {%- if multistage.ij_caches and multistage.ij_caches|length > 0 %}
@@ -117,10 +105,7 @@
         }
       {%- endfor %}
 
-      if (iblock >= mss_info::max_stage_extent::iminus() &&
-          iblock < current_block_i_size + mss_info::max_stage_extent::iplus() &&
-          jblock >= mss_info::max_stage_extent::jminus() &&
-          jblock < current_block_j_size + mss_info::max_stage_extent::jplus())
+      if (helpers::in_domain<mss_info::max_stage_extent>(iblock, jblock, current_block_i_size, current_block_j_size))
           ptrs.terminate_caches();
   }
 {%- endfor %}

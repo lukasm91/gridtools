@@ -270,5 +270,10 @@ namespace gridtools {
             : std::integral_constant<int, VBoundary <= 1 ? 1 : VBoundary <= 2 ? 2 : VBoundary <= 4 ? 4 : 8> {
             GT_STATIC_ASSERT(VBoundary >= 0 && VBoundary <= 8, "TOO LARGE EXTENT");
         };
+        template <typename Extent>
+        GT_FUNCTION_DEVICE bool in_domain(int const iblock, int const jblock, int const isize, int const jsize) {
+            return iblock >= Extent::iminus() && iblock < isize + Extent::iplus() && jblock >= Extent::jminus() &&
+                   jblock < jsize + Extent::jplus();
+        }
     } // namespace gt_gen_helpers
 } // namespace gridtools
