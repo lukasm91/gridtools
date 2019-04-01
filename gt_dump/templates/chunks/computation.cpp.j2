@@ -36,8 +36,8 @@ generated_computation<Grid>::generated_computation(Grid const& grid)
     gt::uint_t const num_blocks_i = (nx + helpers::block_i_size - 1) / helpers::block_i_size;
     gt::uint_t const num_blocks_j = (ny + helpers::block_j_size - 1) / helpers::block_j_size;
 
-    static constexpr const int i_padded_length = helpers::get_blocked_i_padded_length<computation_info::max_arg_extent>::value;
-    static constexpr const int j_padded_length = helpers::get_blocked_j_padded_length<computation_info::max_arg_extent>::value;
+    static constexpr int i_padded_length = helpers::get_blocked_i_padded_length<computation_info::max_arg_extent>::value;
+    static constexpr int j_padded_length = helpers::get_blocked_j_padded_length<computation_info::max_arg_extent>::value;
 
     int const k_padded_length = grid_.k_total_length();
     {% for arg_id, arg_info in context.temporaries|dictsort %}

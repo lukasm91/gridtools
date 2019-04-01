@@ -2,7 +2,7 @@
   template <typename Grid>
   __global__ void {{ multistage.launch_kernel }}(multistage_{{ multistage.id }}_ptrs ptrs, Grid grid) {
 
-      static constexpr const int OffsetLimit = {{ context.offset_limit }};
+      static constexpr int OffsetLimit = {{ context.offset_limit }};
 
       using mss_info = multistage_{{ multistage.id }}_info;
       int const nx = grid.i_high_bound() - grid.i_low_bound() + 1;
