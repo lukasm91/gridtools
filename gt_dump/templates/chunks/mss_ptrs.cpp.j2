@@ -54,33 +54,35 @@
       {%- endfor %}
 
       {%- for arg_id, arg_info in multistage.temporaries.args|dictsort %}
-        struct kind_tmp_{{ arg_id }}_fields {
-            kind_tmp_{{ arg_id }}_fields(kind_tmp_{{ arg_id }}_info const& si) noexcept : si_(si) {}
-            kind_tmp_{{ arg_id }}_info si_;
+        {%- if not arg_info.local %}
+          struct kind_tmp_{{ arg_id }}_fields {
+              kind_tmp_{{ arg_id }}_fields(kind_tmp_{{ arg_id }}_info const& si) noexcept : si_(si) {}
+              kind_tmp_{{ arg_id }}_info si_;
 
-            {{ arg_info.type }}{{ ' const' if arg_info.readonly }}* ptr_ = nullptr;
-            {%- if arg_info.cached == 'K' %}
-              {{ arg_info.type }}{{ ' const' if arg_info.readonly }}* ptr_start_ = nullptr;
-              GT_FUNCTION bool is_arg_in_bound({{ arg_info.type }}{{ ' const' if arg_info.readonly }}* p) const noexcept {
-                  return p >= ptr_start_ && p < ptr_start_ + si_.get_total_size();
+              {{ arg_info.type }}{{ ' const' if arg_info.readonly }}* ptr_ = nullptr;
+              {%- if arg_info.cached == 'K' %}
+                {{ arg_info.type }}{{ ' const' if arg_info.readonly }}* ptr_start_ = nullptr;
+                GT_FUNCTION bool is_arg_in_bound({{ arg_info.type }}{{ ' const' if arg_info.readonly }}* p) const noexcept {
+                    return p >= ptr_start_ && p < ptr_start_ + si_.get_total_size();
+                }
+              {%- endif %}
+
+              void check() const noexcept {
+                  assert(ptr_ != nullptr);
               }
-            {%- endif %}
 
-            void check() const noexcept {
-                assert(ptr_ != nullptr);
-            }
+              GT_FUNCTION void increment(int const offset) noexcept { ptr_ += offset; }
 
-            GT_FUNCTION void increment(int const offset) noexcept { ptr_ += offset; }
+              GT_FUNCTION void increment_i(int const i) noexcept { increment(si_.get_offset(i, 0, 0)); }
+              GT_FUNCTION void increment_j(int const j) noexcept { increment(si_.get_offset(0, j, 0)); }
+              GT_FUNCTION void increment_k(int const k) noexcept { increment(si_.get_offset(0, 0, k)); }
 
-            GT_FUNCTION void increment_i(int const i) noexcept { increment(si_.get_offset(i, 0, 0)); }
-            GT_FUNCTION void increment_j(int const j) noexcept { increment(si_.get_offset(0, j, 0)); }
-            GT_FUNCTION void increment_k(int const k) noexcept { increment(si_.get_offset(0, 0, k)); }
-
-            GT_FUNCTION void initialize(int const nbx, int const nby, int const i, int const j, int const k) noexcept {
-                increment(si_.get_block_offset(nbx, nby));
-                increment(si_.get_offset(i, j, k));
-            }
-        } kind_tmp_{{ arg_id }}_fields_;
+              GT_FUNCTION void initialize(int const nbx, int const nby, int const i, int const j, int const k) noexcept {
+                  increment(si_.get_block_offset(nbx, nby));
+                  increment(si_.get_offset(i, j, k));
+              }
+          } kind_tmp_{{ arg_id }}_fields_;
+        {%- endif %}
       {%- endfor %}
 
       void check() const noexcept {
@@ -88,7 +90,9 @@
             kind_{{ kind_id }}_fields_.check();
           {%- endfor %}
           {%- for arg_id, arg_info in multistage.temporaries.args|dictsort %}
-            kind_tmp_{{ arg_id }}_fields_.check();
+            {%- if not arg_info.local %}
+              kind_tmp_{{ arg_id }}_fields_.check();
+            {%- endif %}
           {%- endfor %}
       }
 
@@ -97,7 +101,9 @@
             kind_{{ kind_id }}_fields_.increment_i(i);
           {%- endfor %}
           {%- for arg_id, arg_info in multistage.temporaries.args|dictsort %}
-            kind_tmp_{{ arg_id }}_fields_.increment_i(i);
+            {%- if not arg_info.local %}
+              kind_tmp_{{ arg_id }}_fields_.increment_i(i);
+            {%- endif %}
           {%- endfor %}
       }
       GT_FUNCTION void increment_j(int const j = 1) noexcept {
@@ -105,7 +111,9 @@
             kind_{{ kind_id }}_fields_.increment_j(j);
           {%- endfor %}
           {%- for arg_id, arg_info in multistage.temporaries.args|dictsort %}
-            kind_tmp_{{ arg_id }}_fields_.increment_j(j);
+            {%- if not arg_info.local %}
+              kind_tmp_{{ arg_id }}_fields_.increment_j(j);
+            {%- endif %}
           {%- endfor %}
       }
       GT_FUNCTION void increment_k(int const k = 1) noexcept {
@@ -113,7 +121,9 @@
             kind_{{ kind_id }}_fields_.increment_k(k);
           {%- endfor %}
           {%- for arg_id, arg_info in multistage.temporaries.args|dictsort %}
-            kind_tmp_{{ arg_id }}_fields_.increment_k(k);
+            {%- if not arg_info.local %}
+              kind_tmp_{{ arg_id }}_fields_.increment_k(k);
+            {%- endif %}
           {%- endfor %}
       }
       GT_FUNCTION void increment(int const i, int const j, int const k) noexcept {
@@ -128,7 +138,9 @@
             kind_{{ kind_id }}_fields_.initialize(blockIdx.x, blockIdx.y, iblock, jblock, 0);
           {%- endfor %}
           {%- for arg_id, arg_info in multistage.temporaries.args|dictsort %}
-            kind_tmp_{{ arg_id }}_fields_.initialize(blockIdx.x, blockIdx.y, iblock, jblock, 0);
+            {%- if not arg_info.local %}
+  i             kind_tmp_{{ arg_id }}_fields_.initialize(blockIdx.x, blockIdx.y, iblock, jblock, 0);
+            {%- endif %}
           {%- endfor %}
       }
       GT_FUNCTION_DEVICE void init_caches() noexcept {
@@ -313,10 +325,12 @@
       multistage_{{ multistage.id }}_ptrs(
           {%- set comma = joiner(", ") %}
           {%- for kind_id, kind_info in multistage.kinds|dictsort %}
-              {{- comma() }}kind_{{ kind_id }}_fields kind_{{ kind_id }}_fields
+            {{- comma() }}kind_{{ kind_id }}_fields kind_{{ kind_id }}_fields
           {%- endfor -%}
           {%- for arg_id, arg_info in multistage.temporaries.args|dictsort %}
+            {%- if not arg_info.local %}
               {{- comma() }}kind_tmp_{{ arg_id }}_fields kind_tmp_{{ arg_id }}_fields
+            {%- endif %}
           {%- endfor -%}
           )
           {%- set comma = joiner(", ") %}
@@ -324,7 +338,9 @@
               {{- comma() }}kind_{{ kind_id }}_fields_(kind_{{ kind_id }}_fields)
           {%- endfor %}
           {%- for arg_id, arg_info in multistage.temporaries.args|dictsort %}
+            {%- if not arg_info.local %}
               {{- comma() }}kind_tmp_{{ arg_id }}_fields_(kind_tmp_{{ arg_id }}_fields)
+            {%- endif %}
           {%- endfor -%}{};
   };
 {%- endfor %}

@@ -290,15 +290,34 @@ class Generator:
             )
             if not k_cache.temporary:
                 mss_data["kinds"][kind]["args"][k_cache.id]["cached"] = "K"
+                mss_data["kinds"][kind]["args"][k_cache.id]["local"] = local
             else:
                 mss_data["temporaries"]["args"][k_cache.id]["cached"] = "K"
+                mss_data["temporaries"]["args"][k_cache.id]["local"] = local
 
         for ij_cache in mss.ij_caches:
             if not ij_cache.temporary:
                 kind = self.computation.fields.args[ij_cache.id].kind
                 mss_data["kinds"][kind]["args"][ij_cache.id]["cached"] = "IJ"
+                mss_data["kinds"][kind]["args"][ij_cache.id]["local"] = True
             else:
                 mss_data["temporaries"]["args"][ij_cache.id]["cached"] = "IJ"
+                mss_data["temporaries"]["args"][ij_cache.id]["local"] = True
+
+    def _patch_context_with_caches(self, context):
+        for mss in self.computation.multistages:
+            for k_cache in mss.k_caches:
+                local = not k_cache.fill and not k_cache.flush
+                if not k_cache.temporary:
+                    context["args"][k_cache.id]["local"] = local
+                else:
+                    context["temporaries"][k_cache.id]["local"] = local
+
+            for ij_cache in mss.ij_caches:
+                if not ij_cache.temporary:
+                    context["args"][ij_cache.id]["local"] = True
+                else:
+                    context["temporaries"][ij_cache.id]["local"] = True
 
     def _is_readonly(self, mss_data, arg_id, temporary):
         if temporary:
@@ -475,6 +494,7 @@ class Generator:
                 )
             ],
         }
+        self._patch_context_with_caches(context)
 
         pprint(context)
 

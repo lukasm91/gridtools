@@ -69,29 +69,35 @@ generated_computation<Grid>::generated_computation(Grid const& grid)
     auto const initial_i_offset = (-computation_info::max_arg_extent::iminus() + alignment - 1) / alignment * alignment;
 
     {% for arg_id, arg_info in context.temporaries|dictsort -%}
-      if (cudaMalloc((void**)(&ptr_tmp_{{ arg_id }}_origin_),
-          {{- 'i_padded_length * ' if not arg_info|masked(0) }}
-          {{- 'j_padded_length * ' if not arg_info|masked(1) }}
-          {{- 'k_padded_length * ' if not arg_info|masked(2) }}
-          {{- 'num_blocks_i * ' if not arg_info|masked(0) }}
-          {{- 'num_blocks_j * ' if not arg_info|masked(1) -}}
-          sizeof({{ arg_info.type }})
-          {{- '+ initial_i_offset' if not arg_info|masked(0) }}) != cudaSuccess)
-          throw std::runtime_error("cudaMalloc failed");
+      {%- if not arg_info.local %}
+        if (cudaMalloc((void**)(&ptr_tmp_{{ arg_id }}_origin_),
+            {{- 'i_padded_length * ' if not arg_info|masked(0) }}
+            {{- 'j_padded_length * ' if not arg_info|masked(1) }}
+            {{- 'k_padded_length * ' if not arg_info|masked(2) }}
+            {{- 'num_blocks_i * ' if not arg_info|masked(0) }}
+            {{- 'num_blocks_j * ' if not arg_info|masked(1) -}}
+            sizeof({{ arg_info.type }})
+            {{- '+ initial_i_offset' if not arg_info|masked(0) }}) != cudaSuccess)
+            throw std::runtime_error("cudaMalloc failed");
+      {%- endif %}
     {%- endfor %}
     auto const initial_j_offset = -computation_info::max_arg_extent::jminus();
     {% for arg_id, arg_info in context.temporaries|dictsort -%}
-      ptr_tmp_{{ arg_id }}_ = ptr_tmp_{{ arg_id }}_origin_
-          {{- '+ initial_i_offset' if not arg_info|masked(0) }}
-          {%- if not arg_info|masked(1) %}
-            + initial_j_offset {{ '* i_padded_length' if not arg_info|masked(0) }};
-          {%- endif %}
+      {%- if not arg_info.local %}
+        ptr_tmp_{{ arg_id }}_ = ptr_tmp_{{ arg_id }}_origin_
+            {{- '+ initial_i_offset' if not arg_info|masked(0) }}
+            {%- if not arg_info|masked(1) %}
+              + initial_j_offset {{ '* i_padded_length' if not arg_info|masked(0) }};
+            {%- endif %}
+      {%- endif %}
     {%- endfor %}
 }
 template<typename Grid>
 generated_computation<Grid>::~generated_computation() {
     {%- for arg_id, arg_info in context.temporaries|dictsort %}
-      cudaFree(ptr_tmp_{{ arg_id }}_origin_);
+      {%- if not arg_info.local %}
+        cudaFree(ptr_tmp_{{ arg_id }}_origin_);
+      {%- endif %}
     {%- endfor %}
 }
 template<typename Grid>
@@ -108,10 +114,12 @@ void generated_computation<Grid>::run(
     {%- for multistage in context.multistages %}
       {
           {%- for arg_id, arg_info in multistage.temporaries.args|dictsort %}
-            multistage_{{ multistage.id }}_ptrs::kind_tmp_{{ arg_id }}_fields kind_tmp_{{ arg_id }}_fields{kind_tmp_{{ arg_id }}_};
-            kind_tmp_{{ arg_id }}_fields.ptr_ = ptr_tmp_{{ arg_id }}_;
-            {%- if arg_info.cached == 'K' %}
-              kind_tmp_{{ arg_id }}_fields.ptr_start_ = ptr_tmp_{{ arg_id }}_;
+            {%- if not arg_info.local %}
+              multistage_{{ multistage.id }}_ptrs::kind_tmp_{{ arg_id }}_fields kind_tmp_{{ arg_id }}_fields{kind_tmp_{{ arg_id }}_};
+              kind_tmp_{{ arg_id }}_fields.ptr_ = ptr_tmp_{{ arg_id }}_;
+              {%- if arg_info.cached == 'K' %}
+                kind_tmp_{{ arg_id }}_fields.ptr_start_ = ptr_tmp_{{ arg_id }}_;
+              {%- endif %}
             {%- endif %}
           {%- endfor %}
 
@@ -130,10 +138,12 @@ void generated_computation<Grid>::run(
           multistage_{{ multistage.id }}_ptrs ptrs{
               {%- set comma = joiner(", ") %}
               {%- for kind_id, kind_info in multistage.kinds|dictsort %}
-                  {{- comma() }}kind_{{ kind_id }}_fields
+                {{- comma() }}kind_{{ kind_id }}_fields
               {%- endfor -%}
               {%- for arg_id, arg_info in multistage.temporaries.args|dictsort %}
+                {%- if not arg_info.local %}
                   {{- comma() }}kind_tmp_{{ arg_id }}_fields
+                {%- endif %}
               {%- endfor -%}};
           run_multistage_{{ multistage.id }}(ptrs, grid_);
 
