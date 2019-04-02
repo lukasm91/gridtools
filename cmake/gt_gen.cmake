@@ -74,6 +74,8 @@ function(gt_use_dumped_data target)
     target_include_directories(${target}  PUBLIC ${GT_DUMP_SOURCE_DIR})
     target_link_libraries(${target} stdc++fs)
 
+    target_include_directories(GridTools::gridtools INTERFACE ${GT_DUMP_SOURCE_DIR})
+
     if (GT_DUMP_GENERATE_DATA)
         target_compile_definitions(${target} PRIVATE GT_DUMP_GENERATE_DATA)
         target_link_libraries(${target} GridTools::gt_dump_interface)
