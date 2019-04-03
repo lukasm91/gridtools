@@ -10,14 +10,14 @@
 
 #ifndef __CUDACC__
 #if not defined(WORKAROUND)
-void __syncthreads() {}
+inline void __syncthreads() {}
 struct {
     int x;
     int y;
     int z;
 } blockIdx, threadIdx;
 template <typename T>
-T &__ldg(T *t) {
+inline T &__ldg(T *t) {
     return *t;
 }
 #endif
