@@ -272,8 +272,8 @@ namespace gridtools {
         };
         template <typename Extent>
         GT_FUNCTION_DEVICE bool in_domain(int const iblock, int const jblock, int const isize, int const jsize) {
-            return iblock >= Extent::iminus() && iblock < isize + Extent::iplus() && jblock >= Extent::jminus() &&
-                   jblock < jsize + Extent::jplus();
+            return iblock >= Extent::iminus::value && iblock < isize + Extent::iplus::value &&
+                   jblock >= Extent::jminus::value && jblock < jsize + Extent::jplus::value;
         }
     } // namespace gt_gen_helpers
 } // namespace gridtools

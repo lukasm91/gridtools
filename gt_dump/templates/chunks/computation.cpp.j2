@@ -1,6 +1,7 @@
 template<typename Grid>
-struct generated_computation {
+class generated_computation {
     // all temporary arguments (origin points to allocation, non-origin points to compute domain)
+  private:
     {%- for arg_id, arg_info in context.temporaries|dictsort %}
       {%- if not arg_info.local %}
         kind_tmp_{{ arg_id }}_info kind_tmp_{{ arg_id }}_;
@@ -11,6 +12,7 @@ struct generated_computation {
 
     Grid grid_;
 
+  public:
     generated_computation(Grid const& grid);
     ~generated_computation();
 
