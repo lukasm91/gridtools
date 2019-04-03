@@ -7,7 +7,7 @@ add_library(gt_dump_interface ${PROTO_SRCS} ${PROTO_HDRS})
 add_library(GridTools::gt_dump_interface ALIAS gt_dump_interface)
 target_link_libraries(gt_dump_interface PUBLIC ${Protobuf_LIBRARIES})
 get_filename_component(proto_header_dir ${PROTO_HDRS} DIRECTORY)
-target_include_directories(gt_dump_interface PUBLIC ${proto_header_dir})
+target_include_directories(gt_dump_interface PUBLIC ${proto_header_dir} ${Protobuf_INCLUDE_DIR})
 
 add_custom_target(gt_dump_python ALL
     DEPENDS ${INTERFACE_PY}
