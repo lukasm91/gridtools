@@ -40,10 +40,8 @@
       {%- endif %}
       ptrs.initialize(iblock, jblock);
 
-      int min_level = grid.template value_at<gt::level<{{ init_interval[0]}}, {{init_interval[1]}}, OffsetLimit>>();
-      {%- if multistage.direction == "parallel" %}
-        min_level = math::max((int)blockIdx.z * {{ multistage.blocksize }} + (int)grid.k_min(), min_level);
-      {%- endif %}
+      int const min_level = grid.template value_at<gt::level<{{ init_interval[0]}}, {{init_interval[1]}}, OffsetLimit>>()
+          {{ ' + (int)blockIdx.z * 20' if multistage.direction == "parallel" }};
       ptrs.increment_k(min_level);
 
       {% if multistage.k_caches|length > 0 -%}
@@ -55,11 +53,12 @@
         {
             using from_level = gt::level<{{ interval.interval[0][0] }}, {{ interval.interval[0][1] }}, OffsetLimit>;
             using to_level = gt::level<{{ interval.interval[1][0] }}, {{ interval.interval[1][1] }}, OffsetLimit>;
-            int interval_start = grid.template value_at<from_level>();
-            int interval_end = grid.template value_at<to_level>();
             {%- if multistage.direction == "parallel" %}
-              interval_start = math::max((int)blockIdx.z * {{ multistage.blocksize }}, interval_start);
-              interval_end = math::min(((int)blockIdx.z + 1) * {{ multistage.blocksize }} - 1, interval_end);
+              int const interval_start = math::max(min_level, (int)grid.template value_at<from_level>());
+              int const interval_end = math::min(min_level + {{ multistage.blocksize }} - 1, (int)grid.template value_at<to_level>());
+            {%- else %}
+              int const interval_start grid.template value_at<from_level>();
+              int const interval_end = grid.template value_at<to_level>();
             {%- endif %}
             for (int z = interval_start; z <= interval_end;
                  ++z, ptrs.increment_k({{ '1' if multistage.direction != "backward" else '-1' }})) {

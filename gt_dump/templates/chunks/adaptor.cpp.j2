@@ -33,33 +33,43 @@ namespace gridtools {
         template <uint_t ArgId,
             typename Ptrs,
             typename... T,
-            enable_if_t<GT_META_CALL(gt_gen_helpers::is_static_bound_arg, (ArgId, bound_arg_storage_pairs))::value, int> = 0>
-        auto get_stride(Ptrs &&ptrs, T &&...) const GT_AUTO_RETURN(ptrs.template get_stride<ArgId>());
+            enable_if_t<GT_META_CALL(gt_gen_helpers::is_static_bound_arg, (ArgId, bound_arg_storage_pairs))::value,
+                int> = 0,
+            typename RetType = decltype(std::declval<Ptrs>().template get_stride<ArgId>())>
+        RetType get_stride(Ptrs&& ptrs, T&&...) const {
+            return ptrs.template get_stride<ArgId>();
+        }
 
         template <uint_t ArgId,
             typename Ptrs,
             typename... Args,
             typename... DataStores,
-            enable_if_t<!GT_META_CALL(gt_gen_helpers::is_static_bound_arg, (ArgId, bound_arg_storage_pairs))::value, int> = 0,
+            enable_if_t<!GT_META_CALL(gt_gen_helpers::is_static_bound_arg, (ArgId, bound_arg_storage_pairs))::value,
+                int> = 0,
             typename ArgKeys = GT_META_CALL(meta::transform, (gt_gen_helpers::get_tag_of_plh_t, std::tuple<Args...>)),
             typename ArgPosition = GT_META_CALL(meta::st_position, (ArgKeys, std::integral_constant<uint_t, ArgId>))>
-        auto get_stride(Ptrs &&, arg_storage_pair<Args, DataStores> const &... srcs) const GT_AUTO_RETURN(
+        auto get_stride(Ptrs&&, arg_storage_pair<Args, DataStores> const&... srcs) const GT_AUTO_RETURN(
             (gt_gen_helpers::extract_stride(std::get<ArgPosition::value>(std::make_tuple(srcs...)).m_value)));
 
         template <uint_t ArgId,
             typename Ptrs,
             typename... T,
-            enable_if_t<GT_META_CALL(gt_gen_helpers::is_static_bound_arg, (ArgId, bound_arg_storage_pairs))::value, int> = 0>
-        auto get_dim(Ptrs &&ptrs, T &&...) const GT_AUTO_RETURN(ptrs.template get_dim<ArgId>());
+            enable_if_t<GT_META_CALL(gt_gen_helpers::is_static_bound_arg, (ArgId, bound_arg_storage_pairs))::value,
+                int> = 0,
+            typename RetType = decltype(std::declval<Ptrs>().template get_dim<ArgId>())>
+        RetType get_dim(Ptrs&& ptrs, T&&...) const {
+            return ptrs.template get_dim<ArgId>();
+        }
 
         template <uint_t ArgId,
             typename Ptrs,
             typename... Args,
             typename... DataStores,
-            enable_if_t<!GT_META_CALL(gt_gen_helpers::is_static_bound_arg, (ArgId, bound_arg_storage_pairs))::value, int> = 0,
+            enable_if_t<!GT_META_CALL(gt_gen_helpers::is_static_bound_arg, (ArgId, bound_arg_storage_pairs))::value,
+                int> = 0,
             typename ArgKeys = GT_META_CALL(meta::transform, (gt_gen_helpers::get_tag_of_plh_t, std::tuple<Args...>)),
             typename ArgPosition = GT_META_CALL(meta::st_position, (ArgKeys, std::integral_constant<uint_t, ArgId>))>
-        auto get_dim(Ptrs &&, arg_storage_pair<Args, DataStores> const &... srcs) const GT_AUTO_RETURN(
+        auto get_dim(Ptrs&&, arg_storage_pair<Args, DataStores> const&... srcs) const GT_AUTO_RETURN(
             (gt_gen_helpers::extract_dim(std::get<ArgPosition::value>(std::make_tuple(srcs...)).m_value)));
 
       public:

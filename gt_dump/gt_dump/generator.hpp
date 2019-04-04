@@ -252,8 +252,11 @@ namespace gridtools {
             void operator()(const std::string &filename) const {
                 if (filename == "")
                     return;
-                std::experimental::filesystem::create_directory(
-                    std::experimental::filesystem::path(filename).parent_path());
+                try {
+                    std::experimental::filesystem::create_directory(
+                        std::experimental::filesystem::path(filename).parent_path());
+                } catch (...) {
+                }
                 std::ofstream of(filename, std::ios::out | std::ios::binary | std::ios::trunc);
                 gt_gen::Computation computation;
                 // the default axis is exclusive while all other intervals are inclusive -> modify
