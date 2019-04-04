@@ -91,8 +91,8 @@
                         {{ interval_stage.name }}::apply(eval
                             {%- if interval_stage.overload != "none" -%}
                                 , gt::interval<
-                                    gt::level<{{ interval.interval[0][0] }}, {{ interval.interval[0][1] }}, OffsetLimit>,
-                                    gt::level<{{ interval.interval[1][0] }}, {{ interval.interval[1][1] }}, OffsetLimit>
+                                    gt::level<{{ interval_stage.overload[0][0] }}, {{ interval_stage.overload[0][1] }}, OffsetLimit>,
+                                    gt::level<{{ interval_stage.overload[1][0] }}, {{ interval_stage.overload[1][1] }}, OffsetLimit>
                                 >{}
                             {%- endif %});
                     }

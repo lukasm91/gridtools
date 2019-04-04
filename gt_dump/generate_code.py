@@ -352,7 +352,7 @@ class Generator:
                         "name": stage_ref.name.replace("(anonymous namespace)::", ""),
                         "id": Generator._make_stage_id(id_d, id_i),
                         "argmap_name": Generator._make_argmap_name(
-                            mss_id, id_d, id_i, stage_ref.name
+                            mss_id, id_d, id_i, Generator._restore_stage_name(stage_ref.name)
                         ),
                         "argmap": [
                             {
@@ -463,7 +463,7 @@ class Generator:
             "offset_limit": self.computation.offset_limit,
             "kinds": {
                 kind_id: {
-                    "layout": list(kind_info.layout),
+                    "layout": [-1, -1, -1] if list(kind_info.layout) == [-1] else list(kind_info.layout),
                     "args": [
                         arg_id
                         for arg_id, arg_info in self.computation.fields.args.items()

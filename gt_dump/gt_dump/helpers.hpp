@@ -258,8 +258,8 @@ namespace gridtools {
                 noexcept GT_AUTO_RETURN(ptrs_.resolve(decltype(ArgMap{}(arg)){}, arg));
 
             template <uint_t I>
-            GT_FUNCTION_DEVICE auto operator()(global_accessor<I> const &arg) const
-                noexcept GT_AUTO_RETURN(ptrs_.resolve(decltype(ArgMap{}(arg)){}));
+            GT_FUNCTION_DEVICE auto operator()(global_accessor<I> const &arg) const noexcept GT_AUTO_RETURN(
+                static_cast<const Ptrs &>(ptrs_).resolve(decltype(ArgMap{}(gridtools::accessor<I>())){}, {}));
 
             template <class Op, class... Ts>
             GT_FUNCTION_DEVICE auto operator()(expr<Op, Ts...> const &arg) const
