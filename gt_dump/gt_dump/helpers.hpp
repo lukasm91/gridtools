@@ -139,6 +139,8 @@ namespace gridtools {
         struct computation_ptrs;
         template <typename... BoundPlaceholders, typename... BoundDataStores>
         struct computation_ptrs<std::tuple<gridtools::arg_storage_pair<BoundPlaceholders, BoundDataStores>...>> {
+            using bound_arg_storage_pairs_t = std::tuple<arg_storage_pair<BoundPlaceholders, BoundDataStores>...>;
+
             using ptrs = std::tuple<typename BoundPlaceholders::data_store_t::data_t *...>;
             using storage_infos = GT_META_CALL(
                 gridtools::meta::dedup, std::tuple<typename BoundPlaceholders::data_store_t::storage_info_t...>);
@@ -181,7 +183,7 @@ namespace gridtools {
                 }
             };
 
-            void assign(std::tuple<gridtools::arg_storage_pair<BoundPlaceholders, BoundDataStores>...> &&args) {
+            void assign(bound_arg_storage_pairs_t &&args) {
                 auto assign_args = gridtools::tuple_util::for_each(assign_arg_f{ptrs_});
                 assign_args(std::move(args));
 
@@ -204,12 +206,14 @@ namespace gridtools {
             template <gridtools::uint_t ArgId>
             using si_array = GT_META_CALL(gridtools::meta::at, (si_arrays, si_position_t<ArgId>));
 
-            template <gridtools::uint_t ArgId>
+            template <gridtools::uint_t ArgId,
+                enable_if_t<GT_META_CALL(is_static_bound_arg, (ArgId, bound_arg_storage_pairs_t))::value, int> = 1>
             si_array<ArgId> get_stride() const {
                 return std::get<si_position_t<ArgId>::value>(strides_);
             }
 
-            template <gridtools::uint_t ArgId>
+            template <gridtools::uint_t ArgId,
+                enable_if_t<GT_META_CALL(is_static_bound_arg, (ArgId, bound_arg_storage_pairs_t))::value, int> = 1>
             si_array<ArgId> get_dim() const {
                 return std::get<si_position_t<ArgId>::value>(dims_);
             }
