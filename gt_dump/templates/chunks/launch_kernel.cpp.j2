@@ -57,7 +57,7 @@
               int const interval_start = math::max(min_level, (int)grid.template value_at<from_level>());
               int const interval_end = math::min(min_level + {{ multistage.blocksize }} - 1, (int)grid.template value_at<to_level>());
             {%- else %}
-              int const interval_start grid.template value_at<from_level>();
+              int const interval_start = grid.template value_at<from_level>();
               int const interval_end = grid.template value_at<to_level>();
             {%- endif %}
             for (int z = interval_start; z <= interval_end;

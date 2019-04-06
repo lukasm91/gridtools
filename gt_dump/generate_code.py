@@ -86,7 +86,7 @@ def message_to_interval(i):
 
 # replaces some chars that are not supported in identifier
 def to_identifier(name):
-    return re.sub(r"[()<>:]", "_", name)
+    return re.sub(r"[()<>:, ]", "_", name)
 
 
 def merge_dicts(f, A, B):
@@ -288,6 +288,7 @@ class Generator:
                 if not k_cache.temporary
                 else None
             )
+            local = not k_cache.fill and not k_cache.flush
             if not k_cache.temporary:
                 mss_data["kinds"][kind]["args"][k_cache.id]["cached"] = "K"
                 mss_data["kinds"][kind]["args"][k_cache.id]["local"] = local

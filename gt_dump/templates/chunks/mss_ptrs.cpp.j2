@@ -139,7 +139,7 @@
           {%- endfor %}
           {%- for arg_id, arg_info in multistage.temporaries.args|dictsort %}
             {%- if not arg_info.local %}
-  i             kind_tmp_{{ arg_id }}_fields_.initialize(blockIdx.x, blockIdx.y, iblock, jblock, 0);
+              kind_tmp_{{ arg_id }}_fields_.initialize(blockIdx.x, blockIdx.y, iblock, jblock, 0);
             {%- endif %}
           {%- endfor %}
       }
