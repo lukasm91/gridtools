@@ -15,6 +15,23 @@ class generated_computation {
   public:
     generated_computation(Grid const& grid);
     ~generated_computation();
+    generated_computation(generated_computation const&) = delete;
+    generated_computation(generated_computation&& other)
+        : {%- for arg_id, arg_info in context.temporaries|dictsort %}
+            {%- if not arg_info.local %}
+              kind_tmp_{{ arg_id }}_(other.kind_tmp_{{ arg_id }}_),
+              ptr_tmp_{{ arg_id }}_(other.ptr_tmp_{{ arg_id }}_),
+              ptr_tmp_{{ arg_id }}_origin_(other.ptr_tmp_{{ arg_id }}_origin_),
+            {%- endif %}
+          {%- endfor %}
+          grid_(other.grid_) {
+        {%- for arg_id, arg_info in context.temporaries|dictsort %}
+          {%- if not arg_info.local %}
+            other.ptr_tmp_{{ arg_id }}_ = other.ptr_tmp_{{ arg_id }}_origin_ = nullptr;
+          {%- endif %}
+        {%- endfor %}
+
+    }
 
     void run(
         {%- set comma = joiner(", ") -%}

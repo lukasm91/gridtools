@@ -48,7 +48,7 @@
             GT_FUNCTION void increment_k(int const k) noexcept { increment(si_.get_offset(0, 0, k)); }
             GT_FUNCTION void initialize(int const nbx, int const nby, int const i, int const j, int const k) noexcept {
                 increment(si_.get_block_offset(nbx, nby));
-                increment(si_.get_offset(i, j, k));
+                increment(si_.get_offset(i, j, 0));
             }
         } kind_{{ kind_id }}_fields_;
       {%- endfor %}
@@ -79,7 +79,7 @@
 
               GT_FUNCTION void initialize(int const nbx, int const nby, int const i, int const j, int const k) noexcept {
                   increment(si_.get_block_offset(nbx, nby));
-                  increment(si_.get_offset(i, j, k));
+                  increment(si_.get_offset(i, j, -k));
               }
           } kind_tmp_{{ arg_id }}_fields_;
         {%- endif %}
@@ -132,14 +132,14 @@
           increment_k(k);
       }
 
-      GT_FUNCTION void initialize(int const iblock, int const jblock) {
+      GT_FUNCTION void initialize(int const iblock, int const jblock, int const k = 0) {
           // move to block / thread
           {%- for kind_id, kind_info in multistage["kinds"]|dictsort %}
-            kind_{{ kind_id }}_fields_.initialize(blockIdx.x, blockIdx.y, iblock, jblock, 0);
+            kind_{{ kind_id }}_fields_.initialize(blockIdx.x, blockIdx.y, iblock, jblock, k);
           {%- endfor %}
           {%- for arg_id, arg_info in multistage.temporaries.args|dictsort %}
             {%- if not arg_info.local %}
-              kind_tmp_{{ arg_id }}_fields_.initialize(blockIdx.x, blockIdx.y, iblock, jblock, 0);
+              kind_tmp_{{ arg_id }}_fields_.initialize(blockIdx.x, blockIdx.y, iblock, jblock, k);
             {%- endif %}
           {%- endfor %}
       }
