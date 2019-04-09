@@ -30,6 +30,19 @@
 #include "../mss.hpp"
 
 namespace gridtools {
+    template <typename ID, typename Grid, typename ArgStoragePairs>
+    struct generated_computation;
+
+    template <long int ID>
+    struct expandable_computation_mapper;
+
+    template <typename ID>
+    struct get_computation_id {
+        static constexpr long int expandable = 0;
+        static constexpr long int remainder = 0;
+    };
+    template <long int ID>
+    struct get_computation_id<std::integral_constant<long int, ID>> : expandable_computation_mapper<ID> {};
 
     namespace _impl {
         // TODO(anstaf): improve readability of this type computation
@@ -295,37 +308,52 @@ namespace gridtools {
             Grid,
             non_expandable_bound_arg_storage_pairs_t,
             GT_META_CALL(_impl::expand_detail::converted_mss_descriptors, (N, MssDescriptors))>;
+        template <size_t N>
+        using converted_computation = typename converted_intermediate<N>::computation_t;
 
         /// Storages that are expandable, is bound in construction time.
         //
         expandable_bound_arg_storage_pairs_t m_expandable_bound_arg_storage_pairs;
 
         /// The object of `intermediate` type to which the computation will be delegated.
-        //
-        converted_intermediate<ExpandFactor> m_intermediate;
+        converted_computation<ExpandFactor> m_intermediate;
 
         /// If the actual size of storages is not divided by `ExpandFactor`, this `intermediate` will process
         /// reminder.
-        converted_intermediate<1> m_intermediate_remainder;
+        converted_computation<1> m_intermediate_remainder;
 
         typename timer_traits<Backend>::timer_type m_meter;
 
-        template <class ExpandableBoundArgStoragePairRefs, class NonExpandableBoundArgStoragePairRefs>
-        intermediate_expand(Grid const &grid,
+        template <class ID, class ExpandableBoundArgStoragePairRefs, class NonExpandableBoundArgStoragePairRefs>
+        intermediate_expand(ID &&id,
+            Grid const &grid,
             std::pair<ExpandableBoundArgStoragePairRefs, NonExpandableBoundArgStoragePairRefs> &&arg_refs)
             // expandable arg_storage_pairs are kept as a class member until run will be called.
             : m_expandable_bound_arg_storage_pairs(std::move(arg_refs.first)),
-              // plain arg_storage_pairs are bound to both intermediates;
-              m_intermediate(grid, arg_refs.second, false), m_intermediate_remainder(grid, arg_refs.second, false),
-              m_meter("NoName") {}
+        // plain arg_storage_pairs are bound to both intermediates;
+#ifdef GT_DUMP_GENERATE_DATA
+              m_intermediate(converted_intermediate<ExpandFactor>{grid, arg_refs.second, false}),
+              m_intermediate_remainder(converted_intermediate<1>{grid, arg_refs.second, false}),
+#else
+              m_intermediate(generated_computation<std::integral_constant<long int, get_computation_id<ID>::expandable>,
+                  Grid,
+                  NonExpandableBoundArgStoragePairRefs>{grid, arg_refs.second}),
+              m_intermediate_remainder(
+                  generated_computation<std::integral_constant<long int, get_computation_id<ID>::remainder>,
+                      Grid,
+                      NonExpandableBoundArgStoragePairRefs>{grid, arg_refs.second}),
+#endif
+              m_meter("NoName") {
+        }
 
       public:
-        template <class BoundArgStoragePairsRefs>
-        intermediate_expand(Grid const &grid, BoundArgStoragePairsRefs &&arg_storage_pairs)
+        template <class ID, class BoundArgStoragePairsRefs>
+        intermediate_expand(ID &&id, Grid const &grid, BoundArgStoragePairsRefs &&arg_storage_pairs)
             // public constructor splits given ard_storage_pairs to expandable and plain ones and delegates to the
             // private constructor.
-            : intermediate_expand(
-                  grid, split_args_tuple<_impl::expand_detail::is_expandable>(std::move(arg_storage_pairs))) {}
+            : intermediate_expand(std::forward<ID>(id),
+                  grid,
+                  split_args_tuple<_impl::expand_detail::is_expandable>(std::move(arg_storage_pairs))) {}
 
         template <class... Args, class... DataStores>
         void run(arg_storage_pair<Args, DataStores> const &... args) {

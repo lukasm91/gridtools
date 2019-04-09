@@ -23,9 +23,10 @@ struct expandable_parameters : computation_fixture<> {
     expandable_parameters() : computation_fixture<>(13, 9, 7) {}
     using storages_t = std::vector<storage_type>;
 
-    template <class... Args>
-    void run_computation(Args &&... args) const {
-        gridtools::make_expandable_computation<backend_t>(expand_factor<2>(), make_grid(), std::forward<Args>(args)...)
+    template <class ID, class... Args>
+    void run_computation(ID &&id, Args &&... args) const {
+        gridtools::make_expandable_computation<backend_t>(
+            std::forward<ID>(id), expand_factor<2>(), make_grid(), std::forward<Args>(args)...)
             .run();
     }
 
@@ -41,12 +42,14 @@ struct expandable_parameters_copy : expandable_parameters {
     storages_t out = {make_storage(1.), make_storage(2.), make_storage(3.), make_storage(4.), make_storage(5.)};
     storages_t in = {make_storage(-1.), make_storage(-2.), make_storage(-3.), make_storage(-4.), make_storage(-5.)};
 
-    template <class Functor>
-    void run_computation() {
+    template <class Functor, class ID>
+    void run_computation(ID &&id) {
         arg<0, storages_t> p_out;
         arg<1, storages_t> p_in;
-        expandable_parameters::run_computation(
-            p_in = in, p_out = out, make_multistage(execute::forward(), make_stage<Functor>(p_out, p_in)));
+        expandable_parameters::run_computation(std::forward<ID>(id),
+            p_in = in,
+            p_out = out,
+            make_multistage(execute::forward(), make_stage<Functor>(p_out, p_in)));
     }
 
     ~expandable_parameters_copy() { verify(in, out); }
@@ -64,8 +67,11 @@ struct copy_functor {
     }
 };
 
-TEST_F(expandable_parameters_copy, copy) { run_computation<copy_functor>(); }
+#include GT_DUMP_GENERATED_CODE(copy)
 
+TEST_F(expandable_parameters_copy, copy) { run_computation<copy_functor>(GT_DUMP_IDENTIFIER(copy)); }
+
+/*
 struct copy_functor_with_expression {
     typedef accessor<0, intent::inout> out;
     typedef accessor<1, intent::in> in;
@@ -79,7 +85,11 @@ struct copy_functor_with_expression {
     }
 };
 
-TEST_F(expandable_parameters_copy, copy_with_expression) { run_computation<copy_functor_with_expression>(); }
+#include GT_DUMP_GENERATED_CODE(copy_with_expression)
+
+TEST_F(expandable_parameters_copy, copy_with_expression) {
+    run_computation<copy_functor_with_expression>(GT_DUMP_IDENTIFIER(copy_with_expression));
+}
 
 struct call_proc_copy_functor {
     typedef accessor<0, intent::inout> out;
@@ -93,7 +103,11 @@ struct call_proc_copy_functor {
     }
 };
 
-TEST_F(expandable_parameters_copy, call_proc_copy) { run_computation<call_proc_copy_functor>(); }
+#include GT_DUMP_GENERATED_CODE(call_proc_copy)
+
+TEST_F(expandable_parameters_copy, call_proc_copy) {
+    run_computation<call_proc_copy_functor>(GT_DUMP_IDENTIFIER(call_proc_copy));
+}
 
 struct call_copy_functor {
     typedef accessor<0, intent::inout> out;
@@ -107,7 +121,9 @@ struct call_copy_functor {
     }
 };
 
-TEST_F(expandable_parameters_copy, call_copy) { run_computation<call_copy_functor>(); }
+#include GT_DUMP_GENERATED_CODE(call_copy)
+
+TEST_F(expandable_parameters_copy, call_copy) { run_computation<call_copy_functor>(GT_DUMP_IDENTIFIER(call_copy)); }
 
 struct shift_functor {
     typedef accessor<0, intent::inout, extent<0, 0, 0, 0, -1, 0>> out;
@@ -133,6 +149,8 @@ struct call_shift_functor {
     GT_FUNCTION static void apply(Evaluation &, axis<1>::full_interval::first_level) {}
 };
 
+#include GT_DUMP_GENERATED_CODE(call_shift)
+
 TEST_F(expandable_parameters, call_shift) {
     auto expected = [&](float_type value) { return make_storage([=](int_t, int_t, int_t) { return value; }); };
     auto in = [&](float_type value) {
@@ -141,9 +159,13 @@ TEST_F(expandable_parameters, call_shift) {
 
     storages_t actual = {in(14), in(15), in(16), in(17), in(18)};
     arg<0, storages_t> plh;
-    run_computation(plh = actual, make_multistage(execute::forward(), make_stage<call_shift_functor>(plh)));
+    run_computation(GT_DUMP_IDENTIFIER(call_shift),
+        plh = actual,
+        make_multistage(execute::forward(), make_stage<call_shift_functor>(plh)));
     verify({expected(14), expected(15), expected(16), expected(17), expected(18)}, actual);
 }
+
+#include GT_DUMP_GENERATED_CODE(caches)
 
 TEST_F(expandable_parameters, caches) {
     storages_t out = {make_storage(1.), make_storage(2.), make_storage(3.), make_storage(4.), make_storage(5.)};
@@ -152,7 +174,8 @@ TEST_F(expandable_parameters, caches) {
     arg<0, storages_t> p_out;
     arg<1> p_in;
     tmp_arg<1> p_tmp;
-    run_computation(p_in = in,
+    run_computation(GT_DUMP_IDENTIFIER(caches),
+        p_in = in,
         p_out = out,
         make_multistage(execute::forward(),
             define_caches(cache<cache_type::ij, cache_io_policy::local>(p_tmp)),
@@ -160,3 +183,4 @@ TEST_F(expandable_parameters, caches) {
             make_stage<copy_functor>(p_out, p_tmp)));
     verify({in, in, in, in, in}, out);
 }
+*/

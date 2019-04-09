@@ -67,7 +67,7 @@ namespace gridtools {
             (gt_gen_helpers::extract_dim(std::get<ArgPosition::value>(std::make_tuple(srcs...)).m_value)));
 
       public:
-        generated_computation(Grid const& grid, std::tuple<arg_storage_pair<BoundPlaceholders, BoundDataStores>...>&& storages)
+        generated_computation(Grid const& grid, std::tuple<arg_storage_pair<BoundPlaceholders, BoundDataStores>...> storages)
             : computation_(grid), storage_pairs_(storages), m_meter("NONAME") {
             ptrs_.assign(std::move(storages));
         }
