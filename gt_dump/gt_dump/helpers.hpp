@@ -279,5 +279,14 @@ namespace gridtools {
             return iblock >= Extent::iminus::value && iblock < isize + Extent::iplus::value &&
                    jblock >= Extent::jminus::value && jblock < jsize + Extent::jplus::value;
         }
+
+        template <typename T>
+        __device__ T cuda_ldg(const T *address) {
+            return __ldg(address);
+        }
+        __device__ inline bool cuda_ldg(const bool *address) {
+            return cuda_ldg(reinterpret_cast<const char *>(address)) != 0;
+        }
+
     } // namespace gt_gen_helpers
 } // namespace gridtools
