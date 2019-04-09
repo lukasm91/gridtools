@@ -29,6 +29,10 @@ namespace gridtools {
         struct get_tag;
         template <uint_t I>
         struct get_tag<_impl::arg_tag<I>> : std::integral_constant<uint_t, I> {};
+        template <size_t I, class Tag>
+        struct get_tag<_impl::expand_detail::unrolled_tag<I, Tag>>
+            : std::integral_constant<uint_t, 100000 * I + get_tag<Tag>::value> {};
+
         template <typename T>
         struct get_tag_of_plh;
         template <class Tag, typename DataStore, typename Location, bool Temporary>

@@ -31,6 +31,8 @@ if (NOT GT_TESTS_ICOSAHEDRAL_GRID)
 
     gt_use_dumped_data(test_stencils_x86)
     gt_use_dumped_data(test_stencils_cuda)
+    gt_use_dumped_data(test_expandable_parameters_x86)
+    gt_use_dumped_data(test_expandable_parameters_cuda)
 
 else()
     fetch_x86_tests(icosahedral_grids LABELS unittest_x86)

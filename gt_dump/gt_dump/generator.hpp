@@ -8,6 +8,7 @@
 #include <experimental/filesystem>
 #include <fstream>
 
+#include "helpers.hpp"
 #include "interface.pb.h"
 
 #ifndef GT_DUMP_GENERATED_CODE
@@ -26,18 +27,6 @@
 namespace gridtools {
 
     namespace gt_gen_helpers {
-        template <typename T>
-        struct get_tag;
-        template <uint_t I>
-        struct get_tag<_impl::arg_tag<I>> : std::integral_constant<uint_t, I> {};
-        template <typename T>
-        struct get_tag_of_plh;
-        template <class Tag, typename DataStore, typename Location, bool Temporary>
-        struct get_tag_of_plh<plh<Tag, DataStore, Location, Temporary>> : get_tag<Tag> {};
-        template <typename T>
-        struct is_temporary_plh;
-        template <class Tag, typename DataStore, typename Location, bool Temporary>
-        struct is_temporary_plh<plh<Tag, DataStore, Location, Temporary>> : std::integral_constant<bool, Temporary> {};
 
         struct add_param_f {
             gt_gen::Stage &stage;

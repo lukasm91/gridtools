@@ -277,6 +277,8 @@ namespace gridtools {
                 m_local_domains);
             return m_local_domains;
         }
+
+        using computation_t = GT_META_CALL(meta::rename, (computation, free_placeholders_t));
     }; // namespace gridtools
 
     /**

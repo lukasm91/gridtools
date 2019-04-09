@@ -551,8 +551,39 @@ class Generator:
 
         os.system("clang-format -i {}".format(out_file))
 
-
 in_file = sys.argv[1]
 out_file = sys.argv[2]
+
+if in_file.endswith("_expanded"):
+    assert out_file.endswith("_expanded")
+    expanded_file = out_file[:-len("_expanded")]
+
+    with open(expanded_file, "w") as out_f:
+        comp_name = in_file.split("__")[-1][:-len("_expanded")]
+        in_file_common = in_file[:-len("_expanded")]
+        comp_id = int(
+            hashlib.blake2b(in_file_common.encode("utf-8"), digest_size=7).hexdigest(), 16
+        )
+        print(comp_name + "_remainder")
+        comp_remainder_id = int(
+            hashlib.blake2b((in_file_common + "_remainder").encode("utf-8"), digest_size=7).hexdigest(), 16
+        )
+        comp_expandable_id = int(
+            hashlib.blake2b((in_file_common + "_expanded").encode("utf-8"), digest_size=7).hexdigest(), 16
+        )
+
+        print("#define GT_DUMP_IDENTIFIER_{} {}".format(comp_name, comp_id), file=out_f)
+        print("namespace gridtools {", file=out_f)
+        print("""
+            template <>
+            struct expandable_computation_mapper<{}> {{
+                static constexpr size_t expandable = {};
+                static constexpr size_t remainder = {};
+            }};""".format(comp_id, comp_expandable_id, comp_remainder_id), file=out_f)
+        print("}", file=out_f)
+        print("#include <{}_expanded>".format(expanded_file), file=out_f)
+        print("#include <{}_remainder>".format(expanded_file), file=out_f)
+
+    os.system("clang-format -i {}".format(expanded_file))
 
 Generator(in_file).generate(out_file)
