@@ -578,8 +578,8 @@ if in_file.endswith("_expanded"):
         print("""
             template <>
             struct expandable_computation_mapper<{}> {{
-                static constexpr size_t expandable = {};
-                static constexpr size_t remainder = {};
+                static constexpr long int expandable = {};
+                static constexpr long int remainder = {};
             }};""".format(comp_id, comp_expandable_id, comp_remainder_id), file=out_f)
         print("}", file=out_f)
         print("#include <{}_expanded>".format(expanded_file), file=out_f)

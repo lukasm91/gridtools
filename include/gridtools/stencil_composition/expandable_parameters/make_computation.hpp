@@ -77,5 +77,5 @@ namespace gridtools {
 #ifdef GT_DUMP_GENERATE_DATA
 #include <gt_dump/generator_expandable.hpp>
 #else
-#include <gt_dump/use_generated.hpp>
+#include <gt_dump/use_generated_expandable.hpp>
 #endif

@@ -36,13 +36,14 @@ namespace gridtools {
     template <long int ID>
     struct expandable_computation_mapper;
 
-    template <typename ID>
+    template <typename ID, typename = void>
     struct get_computation_id {
         static constexpr long int expandable = 0;
         static constexpr long int remainder = 0;
     };
     template <long int ID>
-    struct get_computation_id<std::integral_constant<long int, ID>> : expandable_computation_mapper<ID> {};
+    struct get_computation_id<std::integral_constant<long int, ID>,
+        enable_if_t<expandable_computation_mapper<ID>::expandable>> : expandable_computation_mapper<ID> {};
 
     namespace _impl {
         // TODO(anstaf): improve readability of this type computation
@@ -324,27 +325,37 @@ namespace gridtools {
 
         typename timer_traits<Backend>::timer_type m_meter;
 
-        template <class ID, class ExpandableBoundArgStoragePairRefs, class NonExpandableBoundArgStoragePairRefs>
+        template <class ID,
+            class ExpandableBoundArgStoragePairRefs,
+            class NonExpandableBoundArgStoragePairRefs,
+            enable_if_t<get_computation_id<ID>::expandable != 0, int> = 0>
         intermediate_expand(ID &&id,
             Grid const &grid,
             std::pair<ExpandableBoundArgStoragePairRefs, NonExpandableBoundArgStoragePairRefs> &&arg_refs)
             // expandable arg_storage_pairs are kept as a class member until run will be called.
             : m_expandable_bound_arg_storage_pairs(std::move(arg_refs.first)),
-        // plain arg_storage_pairs are bound to both intermediates;
-#ifdef GT_DUMP_GENERATE_DATA
-              m_intermediate(converted_intermediate<ExpandFactor>{grid, arg_refs.second, false}),
-              m_intermediate_remainder(converted_intermediate<1>{grid, arg_refs.second, false}),
-#else
+              // plain arg_storage_pairs are bound to both intermediates;
               m_intermediate(generated_computation<std::integral_constant<long int, get_computation_id<ID>::expandable>,
                   Grid,
-                  NonExpandableBoundArgStoragePairRefs>{grid, arg_refs.second}),
+                  non_expandable_bound_arg_storage_pairs_t>{grid, arg_refs.second}),
               m_intermediate_remainder(
                   generated_computation<std::integral_constant<long int, get_computation_id<ID>::remainder>,
                       Grid,
-                      NonExpandableBoundArgStoragePairRefs>{grid, arg_refs.second}),
-#endif
-              m_meter("NoName") {
-        }
+                      non_expandable_bound_arg_storage_pairs_t>{grid, arg_refs.second}),
+              m_meter("NoName") {}
+
+        template <class ID,
+            class ExpandableBoundArgStoragePairRefs,
+            class NonExpandableBoundArgStoragePairRefs,
+            enable_if_t<get_computation_id<ID>::expandable == 0, int> = 0>
+        intermediate_expand(ID &&id,
+            Grid const &grid,
+            std::pair<ExpandableBoundArgStoragePairRefs, NonExpandableBoundArgStoragePairRefs> &&arg_refs)
+            // expandable arg_storage_pairs are kept as a class member until run will be called.
+            : m_expandable_bound_arg_storage_pairs(std::move(arg_refs.first)),
+              // plain arg_storage_pairs are bound to both intermediates;
+              m_intermediate(converted_intermediate<ExpandFactor>{grid, arg_refs.second, false}),
+              m_intermediate_remainder(converted_intermediate<1>{grid, arg_refs.second, false}), m_meter("NoName") {}
 
       public:
         template <class ID, class BoundArgStoragePairsRefs>
