@@ -41,7 +41,6 @@ namespace gridtools {
 #else
 #define GT_POSITIONAL_WHEN_DEBUGGING false
 #endif
-
     /// generator for intermediate/intermediate_expand
     ///
     template <class Backend,
@@ -51,10 +50,9 @@ namespace gridtools {
         class Arg,
         class... Args,
         enable_if_t<is_grid<Grid>::value, int> = 0>
-    auto make_expandable_computation(ID &&id, expand_factor<N>, Grid const &grid, Arg &&arg, Args &&... args)
+    auto make_expandable_computation_orig(ID &&id, expand_factor<N>, Grid const &grid, Arg &&arg, Args &&... args)
         GT_AUTO_RETURN((_impl::make_intermediate_expand_f<N, GT_POSITIONAL_WHEN_DEBUGGING, Backend>{}(
             std::forward<ID>(id), grid, std::forward<Arg>(arg), std::forward<Args>(args)...)));
-
 #undef GT_POSITIONAL_WHEN_DEBUGGING
 
     template <class Backend, class Grid, size_t N, class Arg, class... Args, enable_if_t<is_grid<Grid>::value, int> = 0>

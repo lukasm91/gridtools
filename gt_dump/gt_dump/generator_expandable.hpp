@@ -39,14 +39,14 @@ namespace gridtools {
     auto make_expandable_computation(
         std::string const &name, expand_factor<N>, Grid const &grid, Arg &&arg, Args &&... args)
         GT_AUTO_RETURN(gt_gen_helpers::dump_and_return(
-            make_expandable_computation<Backend>(
-                expand_factor<N>{}, grid, std::forward<Arg>(arg), std::forward<Args>(args)...),
+            make_expandable_computation_orig<Backend>(
+                name, expand_factor<N>{}, grid, std::forward<Arg>(arg), std::forward<Args>(args)...),
             name));
 
     template <class Backend, class Grid, size_t N, class Arg, class... Args, enable_if_t<is_grid<Grid>::value, int> = 0>
     auto make_expandable_computation(std::string &&name, expand_factor<N>, Grid const &grid, Arg &&arg, Args &&... args)
         GT_AUTO_RETURN(gt_gen_helpers::dump_and_return(
-            make_expandable_computation<Backend>(
-                expand_factor<N>{}, grid, std::forward<Arg>(arg), std::forward<Args>(args)...),
+            make_expandable_computation_orig<Backend>(
+                name, expand_factor<N>{}, grid, std::forward<Arg>(arg), std::forward<Args>(args)...),
             name));
 } // namespace gridtools
