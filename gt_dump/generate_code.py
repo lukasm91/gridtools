@@ -551,12 +551,13 @@ class Generator:
 
         os.system("clang-format -i {}".format(out_file))
 
-in_file = sys.argv[1]
-out_file = sys.argv[2]
+in_file = os.path.abspath(sys.argv[1])
+out_file = os.path.abspath(sys.argv[2])
 
 if in_file.endswith("_expanded"):
     assert out_file.endswith("_expanded")
     expanded_file = out_file[:-len("_expanded")]
+    print("<{}_expanded>".format(expanded_file))
 
     with open(expanded_file, "w") as out_f:
         comp_name = in_file.split("__")[-1][:-len("_expanded")]
