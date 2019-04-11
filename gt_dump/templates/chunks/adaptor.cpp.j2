@@ -35,7 +35,7 @@ namespace gridtools {
             typename... T,
             enable_if_t<GT_META_CALL(gt_gen_helpers::is_static_bound_arg, (ArgId, bound_arg_storage_pairs))::value,
                 int> = 0>
-        auto get_stride(Ptrs&& ptrs, T&&...) const GT_AUTO_RETURN(ptrs.template get_stride<ArgId>());
+        auto get_stride(Ptrs&& ptrs, T&&...) const GT_AUTO_RETURN(ptrs.get_stride(std::integral_constant<uint_t, ArgId>{}));
 
         template <uint_t ArgId,
             typename Ptrs,
@@ -53,7 +53,7 @@ namespace gridtools {
             typename... T,
             enable_if_t<GT_META_CALL(gt_gen_helpers::is_static_bound_arg, (ArgId, bound_arg_storage_pairs))::value,
                 int> = 0>
-        auto get_dim(Ptrs&& ptrs, T&&...) const GT_AUTO_RETURN(ptrs.template get_dim<ArgId>());
+        auto get_dim(Ptrs&& ptrs, T&&...) const GT_AUTO_RETURN(ptrs.get_dim(std::integral_constant<uint_t, ArgId>{}));
 
         template <uint_t ArgId,
             typename Ptrs,

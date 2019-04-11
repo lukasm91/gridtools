@@ -212,13 +212,13 @@ namespace gridtools {
 
             template <gridtools::uint_t ArgId,
                 enable_if_t<GT_META_CALL(is_static_bound_arg, (ArgId, bound_arg_storage_pairs_t))::value, int> = 1>
-            si_array<ArgId> get_stride() const {
+            si_array<ArgId> get_stride(std::integral_constant<uint_t, ArgId>) const {
                 return std::get<si_position_t<ArgId>::value>(strides_);
             }
 
             template <gridtools::uint_t ArgId,
                 enable_if_t<GT_META_CALL(is_static_bound_arg, (ArgId, bound_arg_storage_pairs_t))::value, int> = 1>
-            si_array<ArgId> get_dim() const {
+            si_array<ArgId> get_dim(std::integral_constant<uint_t, ArgId>) const {
                 return std::get<si_position_t<ArgId>::value>(dims_);
             }
         };
