@@ -97,13 +97,13 @@ namespace gridtools {
 
         {%- for arg_id, arg_info in context.args|dictsort() %}
             {%- set comma = joiner(", ") %}
-            template <typename T, typename LocationType>
+            template <typename Arg, enable_if_t<gt_gen_helpers::get_tag_of_plh<Arg>::value == {{ arg_id }}, int> = 0>
             gridtools::extent<{%- for e in arg_info.extent -%}{{ comma() }}{{ e }}{%- endfor %}>
-            get_arg_extent(gridtools::arg<{{ arg_id }}, T, LocationType>) const noexcept {
+            get_arg_extent(Arg) const noexcept {
                 return {};
             }
-            template <typename T, typename LocationType>
-            gridtools::intent get_arg_intent(gridtools::arg<{{ arg_id }}, T, LocationType>) const noexcept {
+            template <typename Arg, enable_if_t<gt_gen_helpers::get_tag_of_plh<Arg>::value == {{ arg_id }}, int> = 0>
+            gridtools::intent get_arg_intent(Arg) const noexcept {
                 return gridtools::intent::{{ 'in' if arg_info.readonly else 'inout' }};
             }
         {%- endfor %}
