@@ -95,14 +95,18 @@ namespace gridtools {
         void reset_meter() { m_meter.reset(); }
         std::string print_meter() const { return m_meter.to_string(); }
 
-        template <typename Placeholder>
-        gridtools::extent<> get_arg_extent(Placeholder) const noexcept {
-            return {}; // TODO intentionally not done yet (not used in regression tests)
-        }
-        template <typename Placeholder>
-        gridtools::intent get_arg_intent(Placeholder) const noexcept {
-            return {}; // TODO intentionally not done yet (not used in regression tests)
-        }
+        {%- for arg_id, arg_info in context.args|dictsort() %}
+            {%- set comma = joiner(", ") %}
+            template <typename T, typename LocationType>
+            gridtools::extent<{%- for e in arg_info.extent -%}{{ comma() }}{{ e }}{%- endfor %}>
+            get_arg_extent(gridtools::arg<{{ arg_id }}, T, LocationType>) const noexcept {
+                return {};
+            }
+            template <typename T, typename LocationType>
+            gridtools::intent get_arg_intent(gridtools::arg<{{ arg_id }}, T, LocationType>) const noexcept {
+                return gridtools::intent::{{ 'in' if arg_info.readonly else 'inout' }};
+            }
+        {%- endfor %}
 
         double get_time() const noexcept {
             return m_meter.total_time();

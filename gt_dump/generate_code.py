@@ -106,7 +106,7 @@ def max_extent(extent1, extent2):
 
 
 def add_extent(extent1, extent2):
-    return list(map(operator.add, extent1, extent2))
+    return tuple(map(operator.add, extent1, extent2))
 
 
 class Generator:
@@ -454,6 +454,16 @@ class Generator:
 
         return mss_data
 
+    def _patch_computation(self, context):
+        readwrite_args = [arg_id
+            for mss in context["multistages"]
+            for kind_id, kind_info in mss["kinds"].items()
+            for arg_id, arg_info in kind_info["args"].items()
+            if not arg_info["readonly"]]
+
+        for arg_id, arg_info in context["args"].items():
+            arg_info["readonly"] = not arg_id in readwrite_args
+
     def generate(self, out_file):
         stage_analysis_data, arg_extents = self._stage_analysis()
 
@@ -477,7 +487,7 @@ class Generator:
                 arg_id: {
                     "kind": arg_info.kind,
                     "type": arg_info.type,
-                    #  "readonly": False,  # TODO
+                    "extent": arg_extents[arg_id, interface_pb2.Multistage.NORMAL],
                 }
                 for arg_id, arg_info in self.computation.fields.args.items()
             },
@@ -496,6 +506,7 @@ class Generator:
             ],
         }
         self._patch_context_with_caches(context)
+        self._patch_computation(context)
 
         pprint(context)
 
