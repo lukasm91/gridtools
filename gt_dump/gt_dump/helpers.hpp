@@ -285,10 +285,10 @@ namespace gridtools {
         }
 
         template <typename T>
-        __device__ T cuda_ldg(const T *address) {
+        GT_FUNCTION_DEVICE T cuda_ldg(const T *address) {
             return __ldg(address);
         }
-        __device__ inline bool cuda_ldg(const bool *address) {
+        GT_FUNCTION_DEVICE bool cuda_ldg(const bool *address) {
             return cuda_ldg(reinterpret_cast<const char *>(address)) != 0;
         }
 

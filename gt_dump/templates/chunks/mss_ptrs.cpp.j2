@@ -172,7 +172,7 @@
               {%- endif %}
             {%- endfor %}
         }
-        GT_FUNCTION_DEVICE void fill_caches() noexcept {
+        GT_FUNCTION_DEVICE void fill_caches(bool const in_domain) noexcept {
             {%- if multistage.direction == "forward" %}
               // we have forward, so shift downwards
             {%- else %}
@@ -195,14 +195,14 @@
                       {%- if k_cache.temporary %}
                         {{ k_cache.type }}{{ ' const' if k_cache.readonly }}* ptr = kind_tmp_{{ k_cache.id }}_fields_.ptr_ +
                             kind_tmp_{{ k_cache.id }}_fields_.si_.get_offset(0, 0, {{ k_cache.max_extent if forward else k_cache.min_extent }});
-                        if (kind_tmp_{{ k_cache.id }}_fields_.is_arg_in_bound(ptr))
+                        if (in_domain && kind_tmp_{{ k_cache.id }}_fields_.is_arg_in_bound(ptr))
                             k_caches_.arg_tmp_{{ k_cache.id }}_[-kcache_start + {{ k_cache.max_extent if forward else k_cache.min_extent }}] =
                                 {{ 'helpers::cuda_ldg' if k_cache.readonly else '*' -}}(ptr);
 
                       {%- else %}
                         {{ k_cache.type }}{{ ' const' if k_cache.readonly }}* ptr = kind_{{ k_cache.kind }}_fields_.ptr_{{ k_cache.id }}_
                                 + kind_{{ k_cache.kind }}_fields_.si_.get_offset(0, 0, {{ k_cache.max_extent if forward else k_cache.min_extent }});
-                        if (kind_{{ k_cache.kind }}_fields_.is_arg_{{ k_cache.id }}_in_bound(ptr))
+                        if (in_domain && kind_{{ k_cache.kind }}_fields_.is_arg_{{ k_cache.id }}_in_bound(ptr))
                             k_caches_.arg_{{ k_cache.id }}_[-kcache_start + {{ k_cache.max_extent if forward else k_cache.min_extent }}] =
                                 {{ 'helpers::cuda_ldg' if k_cache.readonly else '*' -}}(ptr);
                       {%- endif %}

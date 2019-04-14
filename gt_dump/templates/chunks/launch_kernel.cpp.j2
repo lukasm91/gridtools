@@ -40,12 +40,14 @@
       {%- endif %}
       ptrs.initialize(iblock, jblock, grid.k_min());
 
+      bool const thread_in_domain = helpers::in_domain<mss_info::max_stage_extent>(iblock, jblock, current_block_i_size, current_block_j_size);
+
       int const min_level = grid.template value_at<gt::level<{{ init_interval[0]}}, {{init_interval[1]}}, OffsetLimit>>()
           {{ ' + (int)blockIdx.z * 20' if multistage.direction == "parallel" }};
       ptrs.increment_k(min_level);
 
       {% if multistage.k_caches|length > 0 -%}
-        if (helpers::in_domain<mss_info::max_stage_extent>(iblock, jblock, current_block_i_size, current_block_j_size))
+        if (thread_in_domain)
             ptrs.init_caches();
       {%- endif %}
 
@@ -56,23 +58,22 @@
             {%- if multistage.direction == "parallel" %}
               int const interval_start = math::max(min_level, (int)grid.template value_at<from_level>());
               int const interval_end = math::min(min_level + {{ multistage.blocksize }} - 1, (int)grid.template value_at<to_level>());
+              for (uint_t z = interval_start; z <= (uint_t)interval_end; ++z) {
             {%- else %}
               int const interval_start = grid.template value_at<from_level>();
               int const interval_end = grid.template value_at<to_level>();
+              for (int z = interval_start; z <= interval_end; ++z) {
             {%- endif %}
-            for (int z = interval_start; z <= interval_end;
-                 ++z, ptrs.increment_k({{ '1' if multistage.direction != "backward" else '-1' }})) {
                 {%- if multistage.ij_caches|length > 0 %}
                   __shared__ multistage_{{ multistage.id }}_ij_caches ij_caches;
                 {%- endif %}
 
                 {%- if multistage.k_caches|length > 0 %}
-                  if (helpers::in_domain<mss_info::max_stage_extent>(iblock, jblock, current_block_i_size, current_block_j_size))
-                      ptrs.fill_caches();
+                  ptrs.fill_caches(thread_in_domain);
                 {%- endif %}
 
                 {% for independent_stage_list in interval.stages %}
-                  {%- if not loop.first %}
+                  {%- if independent_stage_list|length > 0 and not loop.first %}
                     __syncthreads();
                   {%- endif %}
                   {%- for interval_stage in independent_stage_list %}
@@ -99,19 +100,21 @@
                 {%- endfor %}
 
                 {% if multistage.k_caches|length > 0 %}
-                  if (helpers::in_domain<mss_info::max_stage_extent>(iblock, jblock, current_block_i_size, current_block_j_size))
+                  if (thread_in_domain)
                       ptrs.flush_caches();
                 {%- endif %}
 
                 {%- if multistage.ij_caches and multistage.ij_caches|length > 0 %}
                   __syncthreads(); // needed because we have an ij cache
                 {%- endif %}
+
+                ptrs.increment_k({{ '1' if multistage.direction != "backward" else '-1' }});
             }
         }
       {%- endfor %}
 
       {% if multistage.k_caches|length > 0 %}
-        if (helpers::in_domain<mss_info::max_stage_extent>(iblock, jblock, current_block_i_size, current_block_j_size))
+        if (thread_in_domain)
             ptrs.terminate_caches();
       {%- endif %}
   }
