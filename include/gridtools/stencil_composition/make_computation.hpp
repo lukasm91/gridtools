@@ -23,6 +23,8 @@
 #include "grid.hpp"
 #include "intermediate.hpp"
 
+#include <iostream>
+
 namespace gridtools {
     namespace _impl {
 
@@ -43,6 +45,9 @@ namespace gridtools {
                 class Msses = GT_META_CALL(decay_elements, typename ArgsPair::second_type)>
             intermediate<IsStateful, Backend, Grid, ArgStoragePairs, Msses> operator()(
                 Grid const &grid, Args &&... args) const {
+#ifndef GT_DUMP_GENERATED_CODE
+                std::cout << "WARNING: make intermediate (GT version)" << std::endl;
+#endif
                 // split arg_storage_pair and mss descriptor arguments and forward it to intermediate constructor
                 auto &&args_pair = split_args<is_arg_storage_pair>(std::forward<Args>(args)...);
                 return {grid, std::move(args_pair.first)};

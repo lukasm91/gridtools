@@ -62,7 +62,11 @@
             {%- else %}
               int const interval_start = grid.template value_at<from_level>();
               int const interval_end = grid.template value_at<to_level>();
-              for (int z = interval_start; z <= interval_end; ++z) {
+              {% if interval.interval[0][0] == interval.interval[1][0] -%}
+                for (int z = 0; z < {{ interval.interval|level_diff }}; ++z) {
+              {% else %}
+                for (int z = interval_start; z <= interval_end; ++z) {
+              {%- endif %}
             {%- endif %}
                 {%- if multistage.ij_caches|length > 0 %}
                   __shared__ multistage_{{ multistage.id }}_ij_caches ij_caches;

@@ -552,6 +552,8 @@ class Generator:
                 ),
                 "to_identifier": to_identifier,
                 "bool_to_str": lambda b: "true" if b else "false",
+                # TODO: Figure out why I need to multiply with 1...
+                "level_diff": lambda i: 1 * i[1][1] - 1 * i[0][1] - (1 if 1 * i[0][1] < 0 and 1 * i[1][1] > 0 else 0) + 1,
             }
         )
 
