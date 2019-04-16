@@ -38,7 +38,8 @@
       {%- else %}
         {%- set init_interval = multistage.intervals[-1].interval[1] %}
       {%- endif %}
-      ptrs.initialize(iblock, jblock, grid.k_min());
+      ptrs.increment_block(blockIdx.x, blockIdx.y);
+      ptrs.increment(iblock, jblock, -grid.k_min());
 
       bool const thread_in_domain = helpers::in_domain<mss_info::max_stage_extent>(iblock, jblock, current_block_i_size, current_block_j_size);
 

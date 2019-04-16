@@ -46,9 +46,13 @@
             GT_FUNCTION void increment_i(int const i) noexcept { increment(si_.get_offset(i, 0, 0)); }
             GT_FUNCTION void increment_j(int const j) noexcept { increment(si_.get_offset(0, j, 0)); }
             GT_FUNCTION void increment_k(int const k) noexcept { increment(si_.get_offset(0, 0, k)); }
-            GT_FUNCTION void initialize(int const nbx, int const nby, int const i, int const j, int const k) noexcept {
+            GT_FUNCTION void increment_ptr(int const i, int const j, int const k) noexcept {
+                increment_i(i);
+                increment_j(j);
+                increment_k(k);
+            }
+            GT_FUNCTION void increment_block(int const nbx, int const nby) noexcept {
                 increment(si_.get_block_offset(nbx, nby));
-                increment(si_.get_offset(i, j, 0));
             }
         } kind_{{ kind_id }}_fields_;
       {%- endfor %}
@@ -77,9 +81,8 @@
               GT_FUNCTION void increment_j(int const j) noexcept { increment(si_.get_offset(0, j, 0)); }
               GT_FUNCTION void increment_k(int const k) noexcept { increment(si_.get_offset(0, 0, k)); }
 
-              GT_FUNCTION void initialize(int const nbx, int const nby, int const i, int const j, int const k) noexcept {
+              GT_FUNCTION void increment_block(int const nbx, int const nby) noexcept {
                   increment(si_.get_block_offset(nbx, nby));
-                  increment(si_.get_offset(i, j, -k));
               }
           } kind_tmp_{{ arg_id }}_fields_;
         {%- endif %}
@@ -132,14 +135,14 @@
           increment_k(k);
       }
 
-      GT_FUNCTION void initialize(int const iblock, int const jblock, int const k = 0) {
+      GT_FUNCTION void increment_block(int const ni, int const nj) {
           // move to block / thread
           {%- for kind_id, kind_info in multistage["kinds"]|dictsort %}
-            kind_{{ kind_id }}_fields_.initialize(blockIdx.x, blockIdx.y, iblock, jblock, k);
+            kind_{{ kind_id }}_fields_.increment_block(ni, nj);
           {%- endfor %}
           {%- for arg_id, arg_info in multistage.temporaries.args|dictsort %}
             {%- if not arg_info.local %}
-              kind_tmp_{{ arg_id }}_fields_.initialize(blockIdx.x, blockIdx.y, iblock, jblock, k);
+              kind_tmp_{{ arg_id }}_fields_.increment_block(ni, nj);
             {%- endif %}
           {%- endfor %}
       }
