@@ -17,10 +17,10 @@
       static constexpr int iminus_warps = mss_info::max_stage_extent::iminus() < 0 ? 1 : 0;
       static constexpr int halo_processing_warps = jplus_warps + jminus_warps + iplus_warps + iminus_warps;
 
-      dim3 threads{helpers::block_i_size, helpers::block_j_size + halo_processing_warps, 1};
+      dim3 threads{computation_info::block_i_size, computation_info::block_j_size + halo_processing_warps, 1};
 
-      gt::uint_t const num_blocks_i = (nx + helpers::block_i_size - 1) / helpers::block_i_size;
-      gt::uint_t const num_blocks_j = (ny + helpers::block_j_size - 1) / helpers::block_j_size;
+      gt::uint_t const num_blocks_i = (nx + computation_info::block_i_size - 1) / computation_info::block_i_size;
+      gt::uint_t const num_blocks_j = (ny + computation_info::block_j_size - 1) / computation_info::block_j_size;
       {%- if multistage.direction == "parallel" %}
         gt::uint_t const num_blocks_k = (nz + {{ multistage.blocksize }} - 1) / {{ multistage.blocksize }};
       {%- else %}

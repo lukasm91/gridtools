@@ -9,12 +9,12 @@
       int const ny = grid.j_high_bound() - grid.j_low_bound() + 1;
 
       int const current_block_i_size =
-          (blockIdx.x + 1) * helpers::block_i_size < nx ? helpers::block_i_size : nx - blockIdx.x * helpers::block_i_size;
+          (blockIdx.x + 1) * computation_info::block_i_size < nx ? computation_info::block_i_size : nx - blockIdx.x * computation_info::block_i_size;
       int const current_block_j_size =
-          (blockIdx.y + 1) * helpers::block_j_size < ny ? helpers::block_j_size : ny - blockIdx.y * helpers::block_j_size;
+          (blockIdx.y + 1) * computation_info::block_j_size < ny ? computation_info::block_j_size : ny - blockIdx.y * computation_info::block_j_size;
 
       static constexpr auto jboundary_limit =
-          helpers::block_j_size + mss_info::max_stage_extent::jplus() - mss_info::max_stage_extent::jminus();
+          computation_info::block_j_size + mss_info::max_stage_extent::jplus() - mss_info::max_stage_extent::jminus();
       static constexpr auto iminus_limit = jboundary_limit + (mss_info::max_stage_extent::iminus() < 0 ? 1 : 0);
       static constexpr auto iplus_limit = iminus_limit + (mss_info::max_stage_extent::iplus() > 0 ? 1 : 0);
 
@@ -29,7 +29,7 @@
           jblock = mss_info::max_stage_extent::jminus() + (int)threadIdx.x / padded_boundary;
       } else if ((int)threadIdx.y < iplus_limit) {
           static constexpr int padded_boundary = helpers::get_padded_boundary<+mss_info::max_stage_extent::iplus()>::value;
-          iblock = helpers::block_i_size + (int)threadIdx.x % padded_boundary;
+          iblock = computation_info::block_i_size + (int)threadIdx.x % padded_boundary;
           jblock = mss_info::max_stage_extent::jminus() + (int)threadIdx.x / padded_boundary;
       }
 

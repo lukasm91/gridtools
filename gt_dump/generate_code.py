@@ -467,6 +467,8 @@ class Generator:
     def generate(self, out_file):
         stage_analysis_data, arg_extents = self._stage_analysis()
 
+        max_stage_extent = reduce(max_extent, [s for mss in stage_analysis_data for ds in mss for s in ds])
+
         context = {
             "hash": self.computation_id,
             "name": self.computation_name,
@@ -504,6 +506,8 @@ class Generator:
                     zip(self.computation.multistages, stage_analysis_data)
                 )
             ],
+            "block_i_size": 32,
+            "block_j_size": 8,
         }
         self._patch_context_with_caches(context)
         self._patch_computation(context)

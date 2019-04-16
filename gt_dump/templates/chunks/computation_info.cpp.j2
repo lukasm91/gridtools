@@ -13,4 +13,7 @@
 
 struct computation_info {
     using max_arg_extent = helpers::extent<{{ context.max_arg_extent|join(', ') }}>;
+
+      static constexpr int block_i_size = {{ context.block_i_size }};
+      static constexpr int block_j_size = {{ context.block_j_size }};
 };

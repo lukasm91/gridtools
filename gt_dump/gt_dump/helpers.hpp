@@ -235,21 +235,19 @@ namespace gridtools {
             using kminus = gridtools::integral_constant<int, KMinus>;
             using kplus = gridtools::integral_constant<int, KPlus>;
         };
-        static constexpr int block_i_size = 32;
-        static constexpr int block_j_size = 8;
 
-        template <typename Extent>
+        template <typename Extent, int BlockISize>
         struct get_blocked_i_padded_length {
             static constexpr const int alignment = 128 / sizeof(double);
 
-            static constexpr const int full_block_i_size = block_i_size - Extent::iminus::value + Extent::iplus::value;
+            static constexpr const int full_block_i_size = BlockISize - Extent::iminus::value + Extent::iplus::value;
             static constexpr const int i_padded_length = (full_block_i_size + alignment - 1) / alignment * alignment;
             static constexpr const int value = i_padded_length;
         };
 
-        template <typename Extent>
+        template <typename Extent, int BlockJSize>
         struct get_blocked_j_padded_length {
-            static constexpr const int j_padded_length = block_j_size - Extent::jminus::value + Extent::jplus::value;
+            static constexpr const int j_padded_length = BlockJSize - Extent::jminus::value + Extent::jplus::value;
             static constexpr const int value = j_padded_length;
         };
 
