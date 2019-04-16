@@ -140,9 +140,6 @@ void generated_computation<Grid>::run(
             {%- if not arg_info.local %}
               multistage_{{ multistage.id }}_ptrs::kind_tmp_{{ arg_id }}_fields kind_tmp_{{ arg_id }}_fields{kind_tmp_{{ arg_id }}_};
               kind_tmp_{{ arg_id }}_fields.ptr_ = ptr_tmp_{{ arg_id }}_;
-              {%- if arg_info.cached == 'K' %}
-                kind_tmp_{{ arg_id }}_fields.ptr_start_ = ptr_tmp_{{ arg_id }}_;
-              {%- endif %}
             {%- endif %}
           {%- endfor %}
 
@@ -151,9 +148,6 @@ void generated_computation<Grid>::run(
             multistage_{{ multistage.id }}_ptrs::kind_{{ kind_id }}_fields kind_{{ kind_id }}_fields{kind_{{ kind_id }}_info};
             {%- for arg_id, arg_info in kind_info.args|dictsort %}
               kind_{{ kind_id }}_fields.ptr_{{ arg_id }}_ = ptr_{{ arg_id }};
-              {%- if arg_info.cached == 'K' %}
-                kind_{{ kind_id }}_fields.ptr_{{ arg_id }}_start_ = ptr_{{ arg_id }};
-              {%- endif %}
             {%- endfor %}
             kind_{{ kind_id }}_fields.increment_ptr(grid_.i_low_bound(), grid_.j_low_bound(), grid_.k_min());
           {%- endfor %}

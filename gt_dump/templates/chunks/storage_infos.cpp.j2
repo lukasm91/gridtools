@@ -1,7 +1,7 @@
 {#- TODO: We allow too much here: Temporaries only make sense for ij and ijk,
   but there is quite some code for other cases
 #}
-{%- for arg_id, arg_info in context.temporaries.items() %}
+{%- for arg_id, arg_info in context.temporaries|dictsort %}
   {%- if not arg_info.local %}
     class kind_tmp_{{ arg_id }}_info {
       public:
@@ -16,15 +16,24 @@
 
         kind_tmp_{{ arg_id }}_info() = default;
 
-        GT_FUNCTION int get_offset(int i, int j, int k) const noexcept {
-            return i * stride_0_ + j * stride_1_ + k * stride_2_;
+        GT_FUNCTION int get_total_size() const noexcept { return total_size_; }
+
+        GT_FUNCTION int get_offset(int i = 0, int j = 0, int k = 0) const noexcept {
+            return offset_ + calc_offset(i, j, k);
+        }
+
+        GT_FUNCTION void increment(int i, int j, int k) noexcept {
+            offset_ += calc_offset(i, j, k);
         }
         GT_FUNCTION int get_block_offset(int i_block, int j_block) const noexcept {
             return stride_i_block_ * i_block + stride_j_block_ * j_block;
         }
-        GT_FUNCTION int get_total_size() const noexcept { return total_size_; }
 
       private:
+        GT_FUNCTION int calc_offset(int i, int j, int k) const noexcept {
+            return i * stride_0_ + j * stride_1_ + k * stride_2_;
+        }
+
         static constexpr int stride_0_ = {{ 1 if not arg_info|masked(0) else 0 }}; // i_stride
         {%- if arg_info|masked(1) %}
           static constexpr int stride_1_ = 0; // j_stride
@@ -58,11 +67,13 @@
         {%- endif %}
 
         int total_size_;
+
+        int offset_ = 0;
     };
   {%- endif %}
 {% endfor %}
 
-{%- for kind_id, kind_info in context.kinds.items() %}
+{%- for kind_id, kind_info in context.kinds|dictsort %}
   class kind_{{ kind_id }}_info {
     public:
       kind_{{- kind_id }}_info(const gt::array<int, {{ kind_info|kind_dimension }}>& strides,
@@ -92,7 +103,22 @@
       }
       kind_{{ kind_id }}_info() = default;
 
-      GT_FUNCTION int get_offset(int i, int j, int k
+      GT_FUNCTION int get_total_size() const noexcept { return total_size_; }
+
+      GT_FUNCTION int get_offset(int i = 0, int j = 0, int k = 0) const noexcept {
+          return offset_ + calc_offset(i, j, k);
+      }
+
+      GT_FUNCTION void increment(int i, int j, int k) noexcept {
+          offset_ += calc_offset(i, j, k);
+      }
+      GT_FUNCTION int get_block_offset(int i_block, int j_block) const noexcept {
+          return calc_offset(computation_info::block_i_size * i_block, computation_info::block_j_size * j_block, 0);
+      }
+
+    private:
+
+      GT_FUNCTION int calc_offset(int i, int j, int k
           {%- for i in range(kind_info.layout|length - 3) %}
               , int n{{ i }} = 0
           {%- endfor %}) const noexcept {
@@ -101,10 +127,6 @@
               + stride_{{ i + 3 }}_ * n{{ i }}
           {%- endfor %};
       }
-      GT_FUNCTION int get_block_offset(int i_block, int j_block) const noexcept {
-          return get_offset(computation_info::block_i_size * i_block, computation_info::block_j_size * j_block, 0);
-      }
-      GT_FUNCTION int get_total_size() const noexcept { return total_size_; }
 
     private:
       {%- for i in range(kind_info.layout|length) %}
@@ -117,5 +139,7 @@
         {%- endif %}
       {%- endfor %}
       int total_size_;
+
+      int offset_ = 0;
   };
 {% endfor %}
