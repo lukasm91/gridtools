@@ -19,6 +19,10 @@
             return i * stride_0_ + j * stride_1_ + k * stride_2_;
         }
 
+        GT_FUNCTION int get_block_offset(int i_block, int j_block) const noexcept {
+            return stride_i_block_ * i_block + stride_j_block_ * j_block;
+        }
+
       private:
         static constexpr int stride_0_ = {{ 1 if not arg_info|masked(0) else 0 }}; // i_stride
         {%- if arg_info|masked(1) %}

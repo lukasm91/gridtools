@@ -69,9 +69,6 @@
               GT_FUNCTION void increment_block_ptr(int const nbx, int const nby) noexcept {
                   ptr_ += si_.get_block_offset(nbx, nby);
               }
-              GT_FUNCTION void increment(int const i, int const j, int const k) noexcept {
-                  si_.increment(i, j, k);
-              }
           } kind_tmp_{{ arg_id }}_fields_;
         {%- endif %}
       {%- endfor %}
@@ -176,7 +173,7 @@
                                 {{ 'helpers::cuda_ldg' if k_cache.readonly else '*' -}}(kind_tmp_{{ k_cache.id }}_fields_.ptr_ + offset);
 
                       {%- else %}
-                        int offset = offsets_.get_offset_{{ k_cache.kind }}(kind_{{ kcache.kind }}_fields_.si_,
+                        int offset = offsets_.get_offset_{{ k_cache.kind }}(kind_{{ k_cache.kind }}_fields_.si_,
                             0, 0, {{ k_cache.max_extent if forward else k_cache.min_extent }});
                         if (in_domain && kind_{{ k_cache.kind }}_fields_.is_arg_in_bound(offset))
                             k_caches_.arg_{{ k_cache.id }}_[-kcache_start + {{ k_cache.max_extent if forward else k_cache.min_extent }}] =
@@ -199,7 +196,7 @@
                           *(kind_tmp_{{ k_cache.id }}_fields_.ptr_ + offset) =
                               k_caches_.arg_tmp_{{ k_cache.id }}_[-kcache_start + {{ offset }}];
                     {%- else %}
-                      int const offset = offsets_.get_offset_{{ k_cache.kind }}(kind_{{ kcache.kind }}_fields_.si_, 0, 0, {{ offset }});
+                      int const offset = offsets_.get_offset_{{ k_cache.kind }}(kind_{{ k_cache.kind }}_fields_.si_, 0, 0, {{ offset }});
                       if (kind_{{ k_cache.kind }}_fields_.is_arg_in_bound(offset))
                           *(kind_{{ k_cache.kind }}_fields_.ptr_{{ k_cache.id }}_ + offset) =
                               k_caches_.arg_{{ k_cache.id }}_[-kcache_start + {{ offset }}];
@@ -221,7 +218,7 @@
                         if (kind_tmp_{{ k_cache.id }}_fields_.is_arg_in_bound(offset))
                             *(kind_tmp_{{ k_cache.id }}_fields_.ptr_ + offset) = k_caches_.arg_tmp_{{ k_cache.id }}_[-kcache_start + {{ i + 1 if forward else i }}];
                       {%- else %}
-                        int const offset = offsets_.get_offset_{{ k_cache.kind }}(kind_{{ kcache.kind }}_fields_.si_, 0, 0, {{ i if forward else i + 1 }});
+                        int const offset = offsets_.get_offset_{{ k_cache.kind }}(kind_{{ k_cache.kind }}_fields_.si_, 0, 0, {{ i if forward else i + 1 }});
                         if (kind_{{ k_cache.kind }}_fields_.is_arg_in_bound(offset))
                             *(kind_{{ k_cache.kind }}_fields_.ptr_{{ k_cache.id }}_ + offset) =
                                 k_caches_.arg_{{ k_cache.id }}_[-kcache_start + {{ i + 1 if forward else i }}];

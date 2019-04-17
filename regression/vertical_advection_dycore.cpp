@@ -173,7 +173,7 @@ struct vertical_advection_dycore : regression_fixture<3, axis_t> {
 };
 
 #include GT_DUMP_GENERATED_CODE(test)
-#include GT_DUMP_GENERATED_CODE(NO_DUMP)
+// #include GT_DUMP_GENERATED_CODE(NO_DUMP)
 
 #define GT
 #define GEN
