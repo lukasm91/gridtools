@@ -39,7 +39,7 @@
         {%- set init_interval = multistage.intervals[-1].interval[1] %}
       {%- endif %}
       ptrs.increment_block_ptr(blockIdx.x, blockIdx.y);
-      ptrs.increment_ptr(iblock, jblock, -grid.k_min());
+      ptrs.increment(iblock, jblock, -grid.k_min());
 
       bool const thread_in_domain = helpers::in_domain<mss_info::max_stage_extent>(iblock, jblock, current_block_i_size, current_block_j_size);
 
@@ -59,7 +59,7 @@
             {%- if multistage.direction == "parallel" %}
               int const interval_start = math::max(min_level, (int)grid.template value_at<from_level>());
               int const interval_end = math::min(min_level + {{ multistage.blocksize }} - 1, (int)grid.template value_at<to_level>());
-              for (uint_t z = interval_start; z <= (uint_t)interval_end; ++z) {
+              for (int z = interval_start; z <= (uint_t)interval_end; ++z) {
             {%- else %}
               int const interval_start = grid.template value_at<from_level>();
               int const interval_end = grid.template value_at<to_level>();
