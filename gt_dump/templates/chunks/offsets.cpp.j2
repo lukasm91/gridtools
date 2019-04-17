@@ -1,0 +1,31 @@
+class offsets {
+  public:
+    {%- for arg_id, arg_info in context.temporaries|dictsort %}
+      {%- if not arg_info.local %}
+        GT_FUNCTION int get_offset_tmp_{{ arg_id }}(kind_tmp_{{ arg_id }}_info const& info, int i = 0, int j = 0, int k = 0) const noexcept {
+            return kind_tmp_{{ arg_id }}_ + info.get_offset(i, j, k);
+        }
+        GT_FUNCTION void increment_tmp_{{ arg_id }}(kind_tmp_{{ arg_id }}_info const& info, int i, int j, int k) noexcept {
+            kind_tmp_{{ arg_id }}_ += info.get_offset(i, j, k);
+        }
+      {%- endif %}
+    {%- endfor %}
+    {%- for kind_id, kind_info in context.kinds|dictsort %}
+      GT_FUNCTION int get_offset_{{ kind_id }}(kind_{{ kind_id }}_info const& info, int i = 0, int j = 0, int k = 0) const noexcept {
+          return kind_{{ kind_id }}_ + info.get_offset(i, j, k);
+      }
+      GT_FUNCTION void increment_{{ kind_id }}(kind_{{ kind_id }}_info const& info, int i, int j, int k) noexcept {
+          kind_{{ kind_id }}_ += info.get_offset(i, j, k);
+      }
+    {%- endfor %}
+  private:
+    {%- for arg_id, arg_info in context.temporaries|dictsort %}
+      {%- if not arg_info.local %}
+        int kind_tmp_{{ arg_id }}_ = 0;
+      {%- endif %}
+    {%- endfor %}
+
+    {%- for kind_id, kind_info in context.kinds|dictsort %}
+      int kind_{{ kind_id }}_ = 0;
+    {%- endfor %}
+};
