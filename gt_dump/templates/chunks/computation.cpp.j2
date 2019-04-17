@@ -149,7 +149,6 @@ void generated_computation<Grid>::run(
             {%- for arg_id, arg_info in kind_info.args|dictsort %}
               kind_{{ kind_id }}_fields.ptr_{{ arg_id }}_ = ptr_{{ arg_id }};
             {%- endfor %}
-            kind_{{ kind_id }}_fields.increment(grid_.i_low_bound(), grid_.j_low_bound(), grid_.k_min());
           {%- endfor %}
 
           multistage_{{ multistage.id }}_ptrs ptrs{

@@ -9,6 +9,7 @@ namespace gen_{{ context.name }}_{{ context.hash }} {
     {% filter indent(width=4) %}
     {%- include 'chunks/computation_info.cpp.j2' %}
     {%- include 'chunks/storage_infos.cpp.j2' %}
+    {%- include 'chunks/offsets.cpp.j2' %}
     {%- include 'chunks/arg_map.cpp.j2' %}
     {%- include 'chunks/mss_ptrs.cpp.j2' %}
     {%- include 'chunks/ij_caches.cpp.j2' %}
