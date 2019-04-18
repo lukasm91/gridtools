@@ -547,8 +547,11 @@ class Generator:
                     if "layout" in k
                     else not any(k["selector"][0:i])
                 ),
-                "has_kcaches": lambda multistage: (
+                "has_k_caches": lambda multistage: (
                     "k_caches" in multistage.keys() and len(multistage["k_caches"]) > 0
+                ),
+                "has_ij_caches": lambda multistage: (
+                    "ij_caches" in multistage.keys() and len(multistage["ij_caches"]) > 0
                 ),
                 "to_identifier": to_identifier,
                 "bool_to_str": lambda b: "true" if b else "false",

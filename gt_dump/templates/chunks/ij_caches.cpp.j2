@@ -1,4 +1,4 @@
-{%- if multistage.ij_caches|length > 0 %}
+{%- if multistage|has_ij_caches %}
   struct ij_caches {
       using mss_info = computation_info::multistage_{{ multistage.id }};
       static constexpr int ij_cache_i_size =
@@ -11,11 +11,36 @@
       {%- endfor %}
 
       {% for ij_cache in multistage.ij_caches %}
+        GT_FUNCTION_DEVICE {{ ij_cache.type }} const* arg_{{ 'tmp_' if ij_cache.temporary }}{{ ij_cache.id }}(int iblock, int jblock) const {
+            return &arg_{{ 'tmp_' if ij_cache.temporary }}{{ ij_cache.id }}_[
+                (jblock + -mss_info::max_stage_extent::jminus()) * ij_cache_i_size +
+                iblock + -mss_info::max_stage_extent::iminus()];
+        }
         GT_FUNCTION_DEVICE {{ ij_cache.type }}* arg_{{ 'tmp_' if ij_cache.temporary }}{{ ij_cache.id }}(int iblock, int jblock) {
             return &arg_{{ 'tmp_' if ij_cache.temporary }}{{ ij_cache.id }}_[
                 (jblock + -mss_info::max_stage_extent::jminus()) * ij_cache_i_size +
                 iblock + -mss_info::max_stage_extent::iminus()];
         }
+      {%- endfor %}
+
+      template<bool B = false>
+      GT_FUNCTION_DEVICE enable_if_t<B, void> resolve(...) const noexcept;
+      template<bool B = false>
+      GT_FUNCTION_DEVICE enable_if_t<B, void> resolve_const(...) const noexcept;
+
+      {%- for ij_cache in multistage.ij_caches %}
+        GT_FUNCTION_DEVICE {{ ij_cache.type }} resolve_const(helpers::arg_identifier<{{ ij_cache.id }}, {{ ij_cache.temporary|bool_to_str }}>,
+            gt::array<int, 3> const& offsets, int const iblock, int const jblock) const noexcept {
+            return *(arg_{{ 'tmp_' if ij_cache.temporary }}{{ ij_cache.id }}(iblock, jblock) +
+                     get_offset(offsets[0], offsets[1], offsets[2]));
+        }
+        {%- if not ij_cache.readonly %}
+          GT_FUNCTION_DEVICE {{ ij_cache.type }}& resolve(helpers::arg_identifier<{{ ij_cache.id }}, {{ ij_cache.temporary|bool_to_str }}>,
+              gt::array<int, 3> const& offsets, int const iblock, int const jblock) noexcept {
+              return *(arg_{{ 'tmp_' if ij_cache.temporary }}{{ ij_cache.id }}(iblock, jblock) +
+                       get_offset(offsets[0], offsets[1], offsets[2]));
+          }
+        {%- endif %}
       {%- endfor %}
 
       GT_FUNCTION int get_offset(int i, int j, int k) const noexcept {

@@ -1,34 +1,50 @@
 struct all_ptrs {
-
-    // forward all but ij caches
+    // resolve for storages
     template <uint_t Id, bool Temporary>
-    GT_FUNCTION_DEVICE double resolve(helpers::arg_identifier<Id, Temporary>, gt::array<int, 3> const &offsets) const {
+    GT_FUNCTION_DEVICE auto resolve(helpers::arg_identifier<Id, Temporary>, gt::array<int, 3> const& offsets) const noexcept
+        -> decltype(std::declval<ptrs>().resolve_const(helpers::arg_identifier<Id, Temporary>(), gt::array<int, 3>())) {
         return ptrs_.resolve_const(helpers::arg_identifier<Id, Temporary>{}, offsets);
     }
     template <uint_t Id, bool Temporary>
-    GT_FUNCTION_DEVICE double& resolve(helpers::arg_identifier<Id, Temporary>, gt::array<int, 3> const &offsets) {
+    GT_FUNCTION_DEVICE auto resolve(helpers::arg_identifier<Id, Temporary>, gt::array<int, 3> const& offsets) noexcept
+        -> decltype(std::declval<ptrs>().resolve(helpers::arg_identifier<Id, Temporary>(), gt::array<int, 3>())) {
         return ptrs_.resolve(helpers::arg_identifier<Id, Temporary>{}, offsets);
     }
 
-    // resolve for ij caches
-    {%- for ij_cache in multistage["ij_caches"] %}
-      GT_FUNCTION_DEVICE {{ ij_cache.type }} resolve(helpers::arg_identifier<{{ ij_cache.id }}, {{ ij_cache.temporary|bool_to_str }}>,
-          gt::array<int, 3> const& offsets) const noexcept {
-          return *(ij_caches_.arg_{{ 'tmp_' if ij_cache.temporary }}{{ ij_cache.id }}(iblock, jblock) +
-                   ij_caches_.get_offset(offsets[0], offsets[1], offsets[2]));
+    {%- if multistage|has_k_caches %}
+      // resolve for k caches
+      template <uint_t Id, bool Temporary>
+      GT_FUNCTION_DEVICE auto resolve(helpers::arg_identifier<Id, Temporary>, gt::array<int, 3> const& offsets) const noexcept
+          -> decltype(std::declval<k_caches>().resolve_const(helpers::arg_identifier<Id, Temporary>(), gt::array<int, 3>())) {
+          return k_caches_.resolve_const(helpers::arg_identifier<Id, Temporary>{}, offsets);
       }
-      {%- if not ij_cache.readonly %}
-        GT_FUNCTION_DEVICE {{ ij_cache.type }}& resolve(helpers::arg_identifier<{{ ij_cache.id }}, {{ ij_cache.temporary|bool_to_str }}>,
-            gt::array<int, 3> const& offsets) noexcept {
-            return *(ij_caches_.arg_{{ 'tmp_' if ij_cache.temporary }}{{ ij_cache.id }}(iblock, jblock) +
-                     ij_caches_.get_offset(offsets[0], offsets[1], offsets[2]));
-        }
-      {%- endif %}
-    {%- endfor %}
+      template <uint_t Id, bool Temporary>
+      GT_FUNCTION_DEVICE auto resolve(helpers::arg_identifier<Id, Temporary>, gt::array<int, 3> const& offsets) noexcept
+          -> decltype(std::declval<k_caches>().resolve(helpers::arg_identifier<Id, Temporary>(), gt::array<int, 3>())) {
+          return k_caches_.resolve(helpers::arg_identifier<Id, Temporary>{}, offsets);
+      }
+    {%- endif %}
+
+    {%- if multistage|has_ij_caches %}
+      // resolve for ij caches
+      template <uint_t Id, bool Temporary>
+      GT_FUNCTION_DEVICE auto resolve(helpers::arg_identifier<Id, Temporary>, gt::array<int, 3> const& offsets) const noexcept
+          -> decltype(std::declval<ij_caches>().resolve_const(helpers::arg_identifier<Id, Temporary>(), gt::array<int, 3>(), 0, 0)) {
+          return ij_caches_.resolve_const(helpers::arg_identifier<Id, Temporary>{}, offsets, iblock, jblock);
+      }
+      template <uint_t Id, bool Temporary>
+      GT_FUNCTION_DEVICE auto resolve(helpers::arg_identifier<Id, Temporary>, gt::array<int, 3> const& offsets) noexcept
+          -> decltype(std::declval<ij_caches>().resolve(helpers::arg_identifier<Id, Temporary>(), gt::array<int, 3>(), 0, 0)) {
+          return ij_caches_.resolve(helpers::arg_identifier<Id, Temporary>{}, offsets, iblock, jblock);
+      }
+    {%- endif %}
 
     ptrs const& ptrs_;
-    {%- if multistage.ij_caches|length > 0 %}
+    {%- if multistage|has_ij_caches %}
       ij_caches &ij_caches_;
+    {%- endif %}
+    {%- if multistage|has_k_caches %}
+      k_caches &k_caches_;
     {%- endif %}
 
     int const iblock;

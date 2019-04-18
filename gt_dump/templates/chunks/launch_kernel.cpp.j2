@@ -23,6 +23,10 @@ __global__ void launch_kernel(
     };
     ptrs.check();
 
+    {% if multistage|has_k_caches %}
+      k_caches k_caches;
+    {%- endif %}
+
     static constexpr int OffsetLimit = {{ context.offset_limit }};
 
     using mss_info = computation_info::multistage_{{ multistage.id }};
@@ -72,9 +76,9 @@ __global__ void launch_kernel(
         {{ ' + (int)blockIdx.z * 20' if multistage.direction == "parallel" }};
     ptrs.increment_k(min_level);
 
-    {% if multistage.k_caches|length > 0 -%}
+    {% if multistage|has_k_caches -%}
       if (thread_in_domain)
-          ptrs.init_caches();
+          k_caches.init(ptrs);
     {%- endif %}
 
     {%for interval in (multistage.intervals if multistage.direction != "backward" else multistage.intervals|reverse) %}
@@ -94,12 +98,12 @@ __global__ void launch_kernel(
               for (int z = interval_start; z <= interval_end; ++z) {
             {%- endif %}
           {%- endif %}
-              {%- if multistage.ij_caches|length > 0 %}
+              {%- if multistage|has_ij_caches %}
                 __shared__ ij_caches ij_caches;
               {%- endif %}
 
-              {%- if multistage.k_caches|length > 0 %}
-                ptrs.fill_caches(thread_in_domain);
+              {%- if multistage|has_k_caches %}
+                k_caches.fill(thread_in_domain, ptrs);
               {%- endif %}
 
               {% for independent_stage_list in interval.stages %}
@@ -111,11 +115,11 @@ __global__ void launch_kernel(
                       mss_info::stage_{{ interval_stage.id }}_{{ interval_stage.name|to_identifier }}::stage_extent;
                   if (helpers::in_domain<stage_{{ interval_stage.id }}_extent>(iblock, jblock, current_block_i_size, current_block_j_size)) {
 
-                      {%- if multistage.ij_caches|length > 0 %}
-                        all_ptrs merged_ptrs{ptrs, ij_caches, iblock, jblock};
-                      {%- else %}
-                        all_ptrs merged_ptrs{ptrs, iblock, jblock};
-                      {%- endif %}
+                      all_ptrs merged_ptrs{ptrs,
+                          {{ 'ij_caches, ' if multistage|has_ij_caches }}
+                          {{ 'k_caches, ' if multistage|has_k_caches }}
+                          iblock,
+                          jblock};
                       auto eval = helpers::eval<all_ptrs,
                           {{ interval_stage.argmap_name }}>{merged_ptrs};
                       {{ interval_stage.name }}::apply(eval
@@ -129,12 +133,12 @@ __global__ void launch_kernel(
                 {%- endfor %}
               {%- endfor %}
 
-              {% if multistage.k_caches|length > 0 %}
+              {% if multistage|has_k_caches %}
                 if (thread_in_domain)
-                    ptrs.flush_caches();
+                    k_caches.flush(ptrs);
               {%- endif %}
 
-              {%- if multistage.ij_caches and multistage.ij_caches|length > 0 %}
+              {%- if multistage.ij_caches and multistage|has_ij_caches %}
                 __syncthreads(); // needed because we have an ij cache
               {%- endif %}
 
@@ -143,8 +147,8 @@ __global__ void launch_kernel(
       }
     {%- endfor %}
 
-    {% if multistage.k_caches|length > 0 %}
+    {% if multistage|has_k_caches > 0 %}
       if (thread_in_domain)
-          ptrs.terminate_caches();
+          k_caches.terminate(ptrs);
     {%- endif %}
 }
