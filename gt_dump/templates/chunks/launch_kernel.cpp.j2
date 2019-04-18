@@ -41,7 +41,7 @@
 
       {% for kind_id, kind_info in multistage.kinds|dictsort -%}
         ptrs.offsets_.increment_{{ kind_id }}(ptrs.kind_{{ kind_id }}_fields_.si_, grid.i_low_bound(), grid.j_low_bound(), grid.k_min()); // TODO hack
-      {%- endfor %}
+      {% endfor %}
       ptrs.increment_block_ptr(blockIdx.x, blockIdx.y);
       ptrs.increment(iblock, jblock, -grid.k_min());
 
