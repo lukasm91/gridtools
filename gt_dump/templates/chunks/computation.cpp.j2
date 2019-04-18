@@ -151,7 +151,7 @@ void generated_computation<Grid>::run(
             {%- endfor %}
           {%- endfor %}
 
-          multistage_{{ multistage.id }}_ptrs ptrs{
+          mss_{{ multistage.id }}::ptrs ptrs{
               {%- set comma = joiner(", ") %}
               {%- for kind_id, kind_info in multistage.kinds|dictsort %}
                 {{- comma() }}kind_{{ kind_id }}_fields
@@ -161,7 +161,7 @@ void generated_computation<Grid>::run(
                   {{- comma() }}kind_tmp_{{ arg_id }}_fields
                 {%- endif %}
               {%- endfor -%}};
-          run_multistage_{{ multistage.id }}(ptrs, grid_);
+          mss_{{ multistage.id }}::run(ptrs, grid_);
 
       }
     {%- endfor %}

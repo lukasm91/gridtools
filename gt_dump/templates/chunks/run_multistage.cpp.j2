@@ -1,42 +1,40 @@
-{%- for multistage in context.multistages %}
-  template <typename Grid>
-  void run_multistage_{{ multistage.id }}(multistage_{{ multistage.id }}_ptrs const& ptrs, Grid const& grid) {
-      using mss_info = computation_info::multistage_{{ multistage.id }};
+template <typename Grid>
+void run(ptrs const& ptrs, Grid const& grid) {
+    using mss_info = computation_info::multistage_{{ multistage.id }};
 
-      ptrs.check();
+    ptrs.check();
 
-      gt::uint_t const nx = grid.i_high_bound() - grid.i_low_bound() + 1;
-      gt::uint_t const ny = grid.j_high_bound() - grid.j_low_bound() + 1;
-      {%- if multistage.direction == "parallel" %}
-      gt::uint_t const nz = grid.k_total_length();
-      {%- endif %}
+    gt::uint_t const nx = grid.i_high_bound() - grid.i_low_bound() + 1;
+    gt::uint_t const ny = grid.j_high_bound() - grid.j_low_bound() + 1;
+    {%- if multistage.direction == "parallel" %}
+    gt::uint_t const nz = grid.k_total_length();
+    {%- endif %}
 
-      static constexpr int jplus_warps = mss_info::max_stage_extent::jplus();
-      static constexpr int jminus_warps = -mss_info::max_stage_extent::jminus();
-      static constexpr int iplus_warps = mss_info::max_stage_extent::iplus() > 0 ? 1 : 0;
-      static constexpr int iminus_warps = mss_info::max_stage_extent::iminus() < 0 ? 1 : 0;
-      static constexpr int halo_processing_warps = jplus_warps + jminus_warps + iplus_warps + iminus_warps;
+    static constexpr int jplus_warps = mss_info::max_stage_extent::jplus();
+    static constexpr int jminus_warps = -mss_info::max_stage_extent::jminus();
+    static constexpr int iplus_warps = mss_info::max_stage_extent::iplus() > 0 ? 1 : 0;
+    static constexpr int iminus_warps = mss_info::max_stage_extent::iminus() < 0 ? 1 : 0;
+    static constexpr int halo_processing_warps = jplus_warps + jminus_warps + iplus_warps + iminus_warps;
 
-      dim3 threads{computation_info::block_i_size, computation_info::block_j_size + halo_processing_warps, 1};
+    dim3 threads{computation_info::block_i_size, computation_info::block_j_size + halo_processing_warps, 1};
 
-      gt::uint_t const num_blocks_i = (nx + computation_info::block_i_size - 1) / computation_info::block_i_size;
-      gt::uint_t const num_blocks_j = (ny + computation_info::block_j_size - 1) / computation_info::block_j_size;
-      {%- if multistage.direction == "parallel" %}
-        gt::uint_t const num_blocks_k = (nz + {{ multistage.blocksize }} - 1) / {{ multistage.blocksize }};
-      {%- else %}
-        gt::uint_t const num_blocks_k = 1;
-      {%- endif %}
+    gt::uint_t const num_blocks_i = (nx + computation_info::block_i_size - 1) / computation_info::block_i_size;
+    gt::uint_t const num_blocks_j = (ny + computation_info::block_j_size - 1) / computation_info::block_j_size;
+    {%- if multistage.direction == "parallel" %}
+      gt::uint_t const num_blocks_k = (nz + {{ multistage.blocksize }} - 1) / {{ multistage.blocksize }};
+    {%- else %}
+      gt::uint_t const num_blocks_k = 1;
+    {%- endif %}
 
-      dim3 blocks{num_blocks_i, num_blocks_j, num_blocks_k};
+    dim3 blocks{num_blocks_i, num_blocks_j, num_blocks_k};
 
-  #ifdef __CUDACC__
-      {{ multistage.launch_kernel }}<<<blocks, threads>>>(ptrs, grid);
-  #else
-      {{ multistage.launch_kernel }}(ptrs, grid);
-  #endif
-  #ifndef NDEBUG
-      if (cudaDeviceSynchronize() != cudaSuccess)
-          throw std::runtime_error("error in multistage 1");
-  #endif
-  }
-{%- endfor %}
+#ifdef __CUDACC__
+    {{ multistage.launch_kernel }}<<<blocks, threads>>>(ptrs, grid);
+#else
+    {{ multistage.launch_kernel }}(ptrs, grid);
+#endif
+#ifndef NDEBUG
+    if (cudaDeviceSynchronize() != cudaSuccess)
+        throw std::runtime_error("error in multistage 1");
+#endif
+}

@@ -1,130 +1,128 @@
-{%- for multistage in context.multistages %}
-  template <typename Grid>
-  __global__ void {{ multistage.launch_kernel }}(multistage_{{ multistage.id }}_ptrs ptrs, Grid grid) {
+template <typename Grid>
+__global__ void {{ multistage.launch_kernel }}(ptrs ptrs, Grid grid) {
 
-      static constexpr int OffsetLimit = {{ context.offset_limit }};
+    static constexpr int OffsetLimit = {{ context.offset_limit }};
 
-      using mss_info = computation_info::multistage_{{ multistage.id }};
-      int const nx = grid.i_high_bound() - grid.i_low_bound() + 1;
-      int const ny = grid.j_high_bound() - grid.j_low_bound() + 1;
+    using mss_info = computation_info::multistage_{{ multistage.id }};
+    int const nx = grid.i_high_bound() - grid.i_low_bound() + 1;
+    int const ny = grid.j_high_bound() - grid.j_low_bound() + 1;
 
-      int const current_block_i_size =
-          (blockIdx.x + 1) * computation_info::block_i_size < nx ? computation_info::block_i_size : nx - blockIdx.x * computation_info::block_i_size;
-      int const current_block_j_size =
-          (blockIdx.y + 1) * computation_info::block_j_size < ny ? computation_info::block_j_size : ny - blockIdx.y * computation_info::block_j_size;
+    int const current_block_i_size =
+        (blockIdx.x + 1) * computation_info::block_i_size < nx ? computation_info::block_i_size : nx - blockIdx.x * computation_info::block_i_size;
+    int const current_block_j_size =
+        (blockIdx.y + 1) * computation_info::block_j_size < ny ? computation_info::block_j_size : ny - blockIdx.y * computation_info::block_j_size;
 
-      static constexpr auto jboundary_limit =
-          computation_info::block_j_size + mss_info::max_stage_extent::jplus() - mss_info::max_stage_extent::jminus();
-      static constexpr auto iminus_limit = jboundary_limit + (mss_info::max_stage_extent::iminus() < 0 ? 1 : 0);
-      static constexpr auto iplus_limit = iminus_limit + (mss_info::max_stage_extent::iplus() > 0 ? 1 : 0);
+    static constexpr auto jboundary_limit =
+        computation_info::block_j_size + mss_info::max_stage_extent::jplus() - mss_info::max_stage_extent::jminus();
+    static constexpr auto iminus_limit = jboundary_limit + (mss_info::max_stage_extent::iminus() < 0 ? 1 : 0);
+    static constexpr auto iplus_limit = iminus_limit + (mss_info::max_stage_extent::iplus() > 0 ? 1 : 0);
 
-      int iblock = mss_info::max_stage_extent::iminus() - 1;
-      int jblock = mss_info::max_stage_extent::jminus() - 1;
-      if ((int)threadIdx.y < jboundary_limit) {
-          iblock = (int)threadIdx.x;
-          jblock = (int)threadIdx.y + mss_info::max_stage_extent::jminus();
-      } else if ((int)threadIdx.y < iminus_limit) {
-          static constexpr int padded_boundary = helpers::get_padded_boundary<-mss_info::max_stage_extent::iminus()>::value;
-          iblock = -padded_boundary + (int)threadIdx.x % padded_boundary;
-          jblock = mss_info::max_stage_extent::jminus() + (int)threadIdx.x / padded_boundary;
-      } else if ((int)threadIdx.y < iplus_limit) {
-          static constexpr int padded_boundary = helpers::get_padded_boundary<+mss_info::max_stage_extent::iplus()>::value;
-          iblock = computation_info::block_i_size + (int)threadIdx.x % padded_boundary;
-          jblock = mss_info::max_stage_extent::jminus() + (int)threadIdx.x / padded_boundary;
-      }
+    int iblock = mss_info::max_stage_extent::iminus() - 1;
+    int jblock = mss_info::max_stage_extent::jminus() - 1;
+    if ((int)threadIdx.y < jboundary_limit) {
+        iblock = (int)threadIdx.x;
+        jblock = (int)threadIdx.y + mss_info::max_stage_extent::jminus();
+    } else if ((int)threadIdx.y < iminus_limit) {
+        static constexpr int padded_boundary = helpers::get_padded_boundary<-mss_info::max_stage_extent::iminus()>::value;
+        iblock = -padded_boundary + (int)threadIdx.x % padded_boundary;
+        jblock = mss_info::max_stage_extent::jminus() + (int)threadIdx.x / padded_boundary;
+    } else if ((int)threadIdx.y < iplus_limit) {
+        static constexpr int padded_boundary = helpers::get_padded_boundary<+mss_info::max_stage_extent::iplus()>::value;
+        iblock = computation_info::block_i_size + (int)threadIdx.x % padded_boundary;
+        jblock = mss_info::max_stage_extent::jminus() + (int)threadIdx.x / padded_boundary;
+    }
 
-      {%- if multistage.direction != "backward" %}
-        {%- set init_interval = multistage.intervals[0].interval[0] %}
-      {%- else %}
-        {%- set init_interval = multistage.intervals[-1].interval[1] %}
-      {%- endif %}
+    {%- if multistage.direction != "backward" %}
+      {%- set init_interval = multistage.intervals[0].interval[0] %}
+    {%- else %}
+      {%- set init_interval = multistage.intervals[-1].interval[1] %}
+    {%- endif %}
 
-      {% for kind_id, kind_info in multistage.kinds|dictsort -%}
-        ptrs.offsets_.increment_{{ kind_id }}(ptrs.kind_{{ kind_id }}_fields_.si_, grid.i_low_bound(), grid.j_low_bound(), grid.k_min()); // TODO hack
-      {% endfor %}
-      ptrs.increment_block_ptr(blockIdx.x, blockIdx.y);
-      ptrs.increment(iblock, jblock, -grid.k_min());
+    {% for kind_id, kind_info in multistage.kinds|dictsort -%}
+      ptrs.offsets_.increment_{{ kind_id }}(ptrs.kind_{{ kind_id }}_fields_.si_, grid.i_low_bound(), grid.j_low_bound(), grid.k_min()); // TODO hack
+    {% endfor %}
+    ptrs.increment_block_ptr(blockIdx.x, blockIdx.y);
+    ptrs.increment(iblock, jblock, -grid.k_min());
 
-      bool const thread_in_domain = helpers::in_domain<mss_info::max_stage_extent>(iblock, jblock, current_block_i_size, current_block_j_size);
+    bool const thread_in_domain = helpers::in_domain<mss_info::max_stage_extent>(iblock, jblock, current_block_i_size, current_block_j_size);
 
-      int const min_level = grid.template value_at<gt::level<{{ init_interval[0]}}, {{init_interval[1]}}, OffsetLimit>>()
-          {{ ' + (int)blockIdx.z * 20' if multistage.direction == "parallel" }};
-      ptrs.increment_k(min_level);
+    int const min_level = grid.template value_at<gt::level<{{ init_interval[0]}}, {{init_interval[1]}}, OffsetLimit>>()
+        {{ ' + (int)blockIdx.z * 20' if multistage.direction == "parallel" }};
+    ptrs.increment_k(min_level);
 
-      {% if multistage.k_caches|length > 0 -%}
-        if (thread_in_domain)
-            ptrs.init_caches();
-      {%- endif %}
+    {% if multistage.k_caches|length > 0 -%}
+      if (thread_in_domain)
+          ptrs.init_caches();
+    {%- endif %}
 
-      {%for interval in (multistage.intervals if multistage.direction != "backward" else multistage.intervals|reverse) %}
-        {
-            using from_level = gt::level<{{ interval.interval[0][0] }}, {{ interval.interval[0][1] }}, OffsetLimit>;
-            using to_level = gt::level<{{ interval.interval[1][0] }}, {{ interval.interval[1][1] }}, OffsetLimit>;
-            {%- if multistage.direction == "parallel" %}
-              int const interval_start = math::max(min_level, (int)grid.template value_at<from_level>());
-              int const interval_end = math::min(min_level + {{ multistage.blocksize }} - 1, (int)grid.template value_at<to_level>());
-              for (int z = interval_start; z <= (uint_t)interval_end; ++z) {
-            {%- else %}
-              int const interval_start = grid.template value_at<from_level>();
-              int const interval_end = grid.template value_at<to_level>();
-              {% if interval.interval[0][0] == interval.interval[1][0] -%}
-                for (int z = 0; z < {{ interval.interval|level_diff }}; ++z) {
-              {% else %}
-                for (int z = interval_start; z <= interval_end; ++z) {
-              {%- endif %}
+    {%for interval in (multistage.intervals if multistage.direction != "backward" else multistage.intervals|reverse) %}
+      {
+          using from_level = gt::level<{{ interval.interval[0][0] }}, {{ interval.interval[0][1] }}, OffsetLimit>;
+          using to_level = gt::level<{{ interval.interval[1][0] }}, {{ interval.interval[1][1] }}, OffsetLimit>;
+          {%- if multistage.direction == "parallel" %}
+            int const interval_start = math::max(min_level, (int)grid.template value_at<from_level>());
+            int const interval_end = math::min(min_level + {{ multistage.blocksize }} - 1, (int)grid.template value_at<to_level>());
+            for (int z = interval_start; z <= (uint_t)interval_end; ++z) {
+          {%- else %}
+            int const interval_start = grid.template value_at<from_level>();
+            int const interval_end = grid.template value_at<to_level>();
+            {% if interval.interval[0][0] == interval.interval[1][0] -%}
+              for (int z = 0; z < {{ interval.interval|level_diff }}; ++z) {
+            {% else %}
+              for (int z = interval_start; z <= interval_end; ++z) {
             {%- endif %}
-                {%- if multistage.ij_caches|length > 0 %}
-                  __shared__ multistage_{{ multistage.id }}_ij_caches ij_caches;
+          {%- endif %}
+              {%- if multistage.ij_caches|length > 0 %}
+                __shared__ ij_caches ij_caches;
+              {%- endif %}
+
+              {%- if multistage.k_caches|length > 0 %}
+                ptrs.fill_caches(thread_in_domain);
+              {%- endif %}
+
+              {% for independent_stage_list in interval.stages %}
+                {%- if independent_stage_list|length > 0 and not loop.first %}
+                  __syncthreads();
                 {%- endif %}
+                {%- for interval_stage in independent_stage_list %}
+                  using stage_{{ interval_stage.id }}_extent =
+                      mss_info::stage_{{ interval_stage.id }}_{{ interval_stage.name|to_identifier }}::stage_extent;
+                  if (helpers::in_domain<stage_{{ interval_stage.id }}_extent>(iblock, jblock, current_block_i_size, current_block_j_size)) {
 
-                {%- if multistage.k_caches|length > 0 %}
-                  ptrs.fill_caches(thread_in_domain);
-                {%- endif %}
-
-                {% for independent_stage_list in interval.stages %}
-                  {%- if independent_stage_list|length > 0 and not loop.first %}
-                    __syncthreads();
-                  {%- endif %}
-                  {%- for interval_stage in independent_stage_list %}
-                    using stage_{{ interval_stage.id }}_extent =
-                        mss_info::stage_{{ interval_stage.id }}_{{ interval_stage.name|to_identifier }}::stage_extent;
-                    if (helpers::in_domain<stage_{{ interval_stage.id }}_extent>(iblock, jblock, current_block_i_size, current_block_j_size)) {
-
-                        {%- if multistage.ij_caches|length > 0 %}
-                          multistage_{{ multistage.id }}_all_ptrs all_ptrs{ptrs, ij_caches, iblock, jblock};
-                        {%- else %}
-                          multistage_{{ multistage.id }}_all_ptrs all_ptrs{ptrs, iblock, jblock};
-                        {%- endif %}
-                        auto eval = helpers::eval<multistage_{{ multistage.id }}_all_ptrs,
-                            {{ interval_stage.argmap_name }}>{all_ptrs};
-                        {{ interval_stage.name }}::apply(eval
-                            {%- if interval_stage.overload != "none" -%}
-                                , gt::interval<
-                                    gt::level<{{ interval_stage.overload[0][0] }}, {{ interval_stage.overload[0][1] }}, OffsetLimit>,
-                                    gt::level<{{ interval_stage.overload[1][0] }}, {{ interval_stage.overload[1][1] }}, OffsetLimit>
-                                >{}
-                            {%- endif %});
-                    }
-                  {%- endfor %}
+                      {%- if multistage.ij_caches|length > 0 %}
+                        all_ptrs merged_ptrs{ptrs, ij_caches, iblock, jblock};
+                      {%- else %}
+                        all_ptrs merged_ptrs{ptrs, iblock, jblock};
+                      {%- endif %}
+                      auto eval = helpers::eval<all_ptrs,
+                          {{ interval_stage.argmap_name }}>{merged_ptrs};
+                      {{ interval_stage.name }}::apply(eval
+                          {%- if interval_stage.overload != "none" -%}
+                              , gt::interval<
+                                  gt::level<{{ interval_stage.overload[0][0] }}, {{ interval_stage.overload[0][1] }}, OffsetLimit>,
+                                  gt::level<{{ interval_stage.overload[1][0] }}, {{ interval_stage.overload[1][1] }}, OffsetLimit>
+                              >{}
+                          {%- endif %});
+                  }
                 {%- endfor %}
+              {%- endfor %}
 
-                {% if multistage.k_caches|length > 0 %}
-                  if (thread_in_domain)
-                      ptrs.flush_caches();
-                {%- endif %}
+              {% if multistage.k_caches|length > 0 %}
+                if (thread_in_domain)
+                    ptrs.flush_caches();
+              {%- endif %}
 
-                {%- if multistage.ij_caches and multistage.ij_caches|length > 0 %}
-                  __syncthreads(); // needed because we have an ij cache
-                {%- endif %}
+              {%- if multistage.ij_caches and multistage.ij_caches|length > 0 %}
+                __syncthreads(); // needed because we have an ij cache
+              {%- endif %}
 
-                ptrs.increment_k({{ '1' if multistage.direction != "backward" else '-1' }});
-            }
-        }
-      {%- endfor %}
+              ptrs.increment_k({{ '1' if multistage.direction != "backward" else '-1' }});
+          }
+      }
+    {%- endfor %}
 
-      {% if multistage.k_caches|length > 0 %}
-        if (thread_in_domain)
-            ptrs.terminate_caches();
-      {%- endif %}
-  }
-{%- endfor %}
+    {% if multistage.k_caches|length > 0 %}
+      if (thread_in_domain)
+          ptrs.terminate_caches();
+    {%- endif %}
+}

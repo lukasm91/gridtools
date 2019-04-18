@@ -11,12 +11,18 @@ namespace gen_{{ context.name }}_{{ context.hash }} {
     {%- include 'chunks/storage_infos.cpp.j2' %}
     {%- include 'chunks/offsets.cpp.j2' %}
     {%- include 'chunks/arg_map.cpp.j2' %}
-    {%- include 'chunks/kind_fields.cpp.j2' %}
-    {%- include 'chunks/mss_ptrs.cpp.j2' %}
-    {%- include 'chunks/ij_caches.cpp.j2' %}
-    {%- include 'chunks/mss_all_ptrs.cpp.j2' %}
-    {%- include 'chunks/launch_kernel.cpp.j2' %}
-    {%- include 'chunks/run_multistage.cpp.j2' %}
+    {%- for multistage in context.multistages %}
+      namespace mss_{{ multistage.id }} {
+          {% filter indent(width = 4) %}
+          {%- include 'chunks/kind_fields.cpp.j2' %}
+          {%- include 'chunks/mss_ptrs.cpp.j2' %}
+          {%- include 'chunks/ij_caches.cpp.j2' %}
+          {%- include 'chunks/mss_all_ptrs.cpp.j2' %}
+          {%- include 'chunks/launch_kernel.cpp.j2' %}
+          {%- include 'chunks/run_multistage.cpp.j2' %}
+          {%- endfilter %}
+      }
+    {%- endfor %}
     {%- include 'chunks/computation.cpp.j2' %}
     {%- endfilter %}
 
