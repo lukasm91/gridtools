@@ -183,9 +183,9 @@ class Generator:
         return "d_{}_i_{}".format(id_d, id_i)
 
     @staticmethod
-    def _make_argmap_name(id_mss, id_d, id_i, stage_name):
-        return "arg_map_{}_{}_{}_{}".format(
-            id_mss, id_d, id_i, to_identifier(stage_name)
+    def _make_argmap_name(id_d, id_i, stage_name):
+        return "arg_map_{}_{}_{}".format(
+            id_d, id_i, to_identifier(stage_name)
         )
 
     @staticmethod
@@ -213,10 +213,7 @@ class Generator:
                             "name": Generator._restore_stage_name(stage_ref.name),
                             "id": Generator._make_stage_id(id_d, id_i),
                             "argmap_name": Generator._make_argmap_name(
-                                mss_id,
-                                id_d,
-                                id_i,
-                                Generator._restore_stage_name(stage_ref.name),
+                                id_d, id_i, Generator._restore_stage_name(stage_ref.name),
                             ),
                             "overload": (
                                 message_to_interval(i.interval)
@@ -353,7 +350,7 @@ class Generator:
                         "name": stage_ref.name.replace("(anonymous namespace)::", ""),
                         "id": Generator._make_stage_id(id_d, id_i),
                         "argmap_name": Generator._make_argmap_name(
-                            mss_id, id_d, id_i, Generator._restore_stage_name(stage_ref.name)
+                            id_d, id_i, Generator._restore_stage_name(stage_ref.name)
                         ),
                         "argmap": [
                             {
@@ -408,7 +405,6 @@ class Generator:
                 }
                 for ij_cache in mss.ij_caches
             ],
-            "launch_kernel": "launch_kernel_{}".format(mss_id),
         }
 
         k_extents = {}

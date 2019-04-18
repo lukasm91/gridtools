@@ -1,5 +1,5 @@
 template <typename Grid>
-__global__ void {{ multistage.launch_kernel }}(ptrs ptrs, Grid grid) {
+__global__ void launch_kernel(ptrs ptrs, Grid grid) {
 
     static constexpr int OffsetLimit = {{ context.offset_limit }};
 

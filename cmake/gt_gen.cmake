@@ -95,7 +95,7 @@ function(gt_use_dumped_data target)
             gt_copy_target(${target}_${source_name_we} ${target})
             target_sources(${target}_${source_name_we} PRIVATE ${source})
 
-            file(GLOB_RECURSE template_files CONFIGURE_DEPENDS ${GT_DUMP_SOURCE_DIR}/templates/* )
+            file(GLOB_RECURSE template_files CONFIGURE_DEPENDS ${GT_DUMP_SOURCE_DIR}/templates/*.j2 )
 
             file(GLOB generated_files RELATIVE ${CMAKE_CURRENT_LIST_DIR} CONFIGURE_DEPENDS ${GT_DUMP_DATA_FOLDER}/${prefix}*)
             foreach(generated_file_source ${generated_files})

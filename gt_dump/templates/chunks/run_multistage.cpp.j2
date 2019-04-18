@@ -29,9 +29,9 @@ void run(ptrs const& ptrs, Grid const& grid) {
     dim3 blocks{num_blocks_i, num_blocks_j, num_blocks_k};
 
 #ifdef __CUDACC__
-    {{ multistage.launch_kernel }}<<<blocks, threads>>>(ptrs, grid);
+    launch_kernel<<<blocks, threads>>>(ptrs, grid);
 #else
-    {{ multistage.launch_kernel }}(ptrs, grid);
+    launch_kernel(ptrs, grid);
 #endif
 #ifndef NDEBUG
     if (cudaDeviceSynchronize() != cudaSuccess)
