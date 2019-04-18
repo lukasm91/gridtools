@@ -1,0 +1,63 @@
+{%- for multistage in context.multistages %}
+  namespace mss_{{ multistage.id }} {
+      {%- for kind_id, kind_info in multistage.kinds|dictsort %}
+        struct kind_{{ kind_id }}_fields {
+            kind_{{ kind_id }}_fields(kind_{{ kind_id }}_info const& si) noexcept : si_(si) {}
+            kind_{{ kind_id }}_info si_;
+
+            {%- for arg_id, arg_info in kind_info.args|dictsort %}
+              {{ arg_info.type }}{{ ' const' if arg_info.readonly }}* ptr_{{ arg_id }}_ = nullptr;
+            {%- endfor %}
+
+            void check() const noexcept {
+                {%- for arg_id, arg_info in kind_info.args|dictsort %}
+                  assert(ptr_{{ arg_id }}_ != nullptr);
+                {%- endfor %}
+            }
+
+            GT_FUNCTION bool is_arg_in_bound(int const offset = 0) const noexcept {
+                return offset >= 0 && offset < si_.get_total_size();
+            }
+
+            GT_FUNCTION void increment_ptr(int const i, int const j, int const k) noexcept {
+                {%- for arg_id, arg_info in kind_info.args|dictsort %}
+                  ptr_{{ arg_id }}_ += si_.get_offset(i, j, k);
+                {%- endfor %}
+            }
+
+            GT_FUNCTION void increment_block_ptr(int const nbx, int const nby) noexcept {
+                {%- for arg_id, arg_info in kind_info.args|dictsort %}
+                  ptr_{{ arg_id }}_ += si_.get_block_offset(nbx, nby);
+                {%- endfor %}
+            }
+        };
+      {%- endfor %}
+
+      {%- for arg_id, arg_info in multistage.temporaries.args|dictsort %}
+        {%- if not arg_info.local %}
+          struct kind_tmp_{{ arg_id }}_fields {
+              kind_tmp_{{ arg_id }}_fields(kind_tmp_{{ arg_id }}_info const& si) noexcept : si_(si) {}
+              kind_tmp_{{ arg_id }}_info si_;
+
+              {{ arg_info.type }}{{ ' const' if arg_info.readonly }}* ptr_ = nullptr;
+              {%- if arg_info.cached == 'K' %}
+                GT_FUNCTION bool is_arg_in_bound(int const offset = 0) const noexcept {
+                    return si_.get_offset() + offset >= 0 && si_.get_offset() + offset < si_.get_total_size();
+                }
+              {%- endif %}
+
+              void check() const noexcept {
+                  assert(ptr_ != nullptr);
+              }
+
+            GT_FUNCTION void increment_ptr(int const i, int const j, int const k) noexcept {
+                  ptr_ += si_.get_offset(i, j, k);
+            }
+              GT_FUNCTION void increment_block_ptr(int const nbx, int const nby) noexcept {
+                  ptr_ += si_.get_block_offset(nbx, nby);
+              }
+          };
+        {%- endif %}
+      {%- endfor %}
+  }
+{%- endfor %}

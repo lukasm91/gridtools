@@ -138,14 +138,14 @@ void generated_computation<Grid>::run(
       {
           {%- for arg_id, arg_info in multistage.temporaries.args|dictsort %}
             {%- if not arg_info.local %}
-              multistage_{{ multistage.id }}_ptrs::kind_tmp_{{ arg_id }}_fields kind_tmp_{{ arg_id }}_fields{kind_tmp_{{ arg_id }}_};
+              mss_{{ multistage.id }}::kind_tmp_{{ arg_id }}_fields kind_tmp_{{ arg_id }}_fields{kind_tmp_{{ arg_id }}_};
               kind_tmp_{{ arg_id }}_fields.ptr_ = ptr_tmp_{{ arg_id }}_;
             {%- endif %}
           {%- endfor %}
 
           {% for kind_id, kind_info in multistage.kinds|dictsort -%}
             kind_{{ kind_id }}_info kind_{{ kind_id }}_info {strides_{{ kind_id }}, dims_{{ kind_id }}};
-            multistage_{{ multistage.id }}_ptrs::kind_{{ kind_id }}_fields kind_{{ kind_id }}_fields{kind_{{ kind_id }}_info};
+            mss_{{ multistage.id }}::kind_{{ kind_id }}_fields kind_{{ kind_id }}_fields{kind_{{ kind_id }}_info};
             {%- for arg_id, arg_info in kind_info.args|dictsort %}
               kind_{{ kind_id }}_fields.ptr_{{ arg_id }}_ = ptr_{{ arg_id }};
             {%- endfor %}
