@@ -21,7 +21,7 @@ class ptrs {
       {%- endif %}
     {%- endfor %}
 
-    void check() const noexcept {
+    GT_FUNCTION_DEVICE void check() const noexcept {
         {%- for kind_id, kind_info in multistage["kinds"]|dictsort %}
           kind_{{ kind_id }}_fields_.check();
         {%- endfor %}
@@ -32,7 +32,7 @@ class ptrs {
         {%- endfor %}
     }
 
-    GT_FUNCTION void increment_ptr(int const i, int const j, int const k) noexcept {
+    GT_FUNCTION_DEVICE void increment_ptr(int const i, int const j, int const k) noexcept {
         {%- for kind_id, kind_info in multistage["kinds"]|dictsort %}
           kind_{{ kind_id }}_fields_.increment_ptr(i, j, k);
         {%- endfor %}
@@ -42,7 +42,7 @@ class ptrs {
           {%- endif %}
         {%- endfor %}
     }
-    GT_FUNCTION void increment(int const i, int const j, int const k) noexcept {
+    GT_FUNCTION_DEVICE void increment(int const i, int const j, int const k) noexcept {
         {%- for kind_id, kind_info in multistage["kinds"]|dictsort %}
           offsets_.increment_{{ kind_id }}(kind_{{ kind_id }}_fields_.si_, i, j, k);
         {%- endfor %}
@@ -52,11 +52,11 @@ class ptrs {
           {%- endif %}
         {%- endfor %}
     }
-    GT_FUNCTION void increment_k(int const k = 1) noexcept {
+    GT_FUNCTION_DEVICE void increment_k(int const k = 1) noexcept {
         increment(0, 0, k);
     }
 
-    GT_FUNCTION void increment_block_ptr(int const nbx, int const nby) noexcept {
+    GT_FUNCTION_DEVICE void increment_block_ptr(int const nbx, int const nby) noexcept {
         // move to block / thread
         {%- for kind_id, kind_info in multistage["kinds"]|dictsort %}
           kind_{{ kind_id }}_fields_.increment_block_ptr(nbx, nby);
@@ -182,7 +182,7 @@ class ptrs {
     {%- for kind_id, kind_info in multistage.kinds|dictsort %}
       {%- for arg_id, arg_info in kind_info.args|dictsort %}
         {%- if arg_info.cached == None %}
-          GT_FUNCTION_DEVICE {{ arg_info.type }} resolve(helpers::arg_identifier<{{ arg_id }}, false>,
+          GT_FUNCTION_DEVICE {{ arg_info.type }} resolve_const(helpers::arg_identifier<{{ arg_id }}, false>,
               gt::array<int, 3> const& offsets) const noexcept {
               return {{ 'helpers::cuda_ldg' if arg_info.readonly else '*' -}}
                   (kind_{{ kind_id }}_fields_.ptr_{{ arg_id }}_
@@ -190,7 +190,7 @@ class ptrs {
           }
           {%- if not arg_info.readonly %}
             GT_FUNCTION_DEVICE {{ arg_info.type }}& resolve(helpers::arg_identifier<{{ arg_id }}, false>,
-                gt::array<int, 3> const& offsets) noexcept {
+                gt::array<int, 3> const& offsets) const noexcept {
                 return *(kind_{{ kind_id }}_fields_.ptr_{{ arg_id }}_
                     + offsets_.get_offset_{{ kind_id }}(kind_{{ kind_id }}_fields_.si_, offsets[0], offsets[1], offsets[2]));
             }
@@ -202,7 +202,7 @@ class ptrs {
     // resolve for not cached arguments (temporaries)
     {%- for arg_id, arg_info in multistage.temporaries.args|dictsort %}
       {%- if arg_info.cached == None %}
-        GT_FUNCTION_DEVICE {{ arg_info.type }} resolve(helpers::arg_identifier<{{ arg_id }}, true>,
+        GT_FUNCTION_DEVICE {{ arg_info.type }} resolve_const(helpers::arg_identifier<{{ arg_id }}, true>,
             gt::array<int, 3> const& offsets) const noexcept {
             return {{ 'helpers::cuda_ldg' if arg_info.readonly else '*' -}}
                 (kind_tmp_{{ arg_id }}_fields_.ptr_
@@ -210,7 +210,7 @@ class ptrs {
         }
         {%- if not arg_info.readonly %}
           GT_FUNCTION_DEVICE {{ arg_info.type }}& resolve(helpers::arg_identifier<{{ arg_id }}, true>,
-              gt::array<int, 3> const& offsets) noexcept {
+              gt::array<int, 3> const& offsets) const noexcept {
               return *(kind_tmp_{{ arg_id }}_fields_.ptr_
                   + offsets_.get_offset_tmp_{{ arg_id }}(kind_tmp_{{ arg_id }}_fields_.si_, offsets[0], offsets[1], offsets[2]));
           }
@@ -244,7 +244,7 @@ class ptrs {
       {%- endif %}
     {%- endfor %}
 
-    ptrs(
+    GT_FUNCTION_DEVICE ptrs(
         {%- set comma = joiner(", ") %}
         {%- for kind_id, kind_info in multistage.kinds|dictsort %}
           {{- comma() }}kind_{{ kind_id }}_fields kind_{{ kind_id }}_fields

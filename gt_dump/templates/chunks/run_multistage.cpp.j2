@@ -1,8 +1,15 @@
 template <typename Grid>
-void run(ptrs const& ptrs, Grid const& grid) {
+void run(
+        {%- for kind_id, kind_info in multistage.kinds|dictsort %}
+          kind_{{ kind_id }}_fields const& kind_{{ kind_id }}_fields,
+        {%- endfor -%}
+        {%- for arg_id, arg_info in multistage.temporaries.args|dictsort %}
+          {%- if not arg_info.local %}
+            kind_tmp_{{ arg_id }}_fields const& kind_{{ arg_id }}_fields,
+          {%- endif %}
+        {%- endfor -%}
+        Grid const& grid) {
     using mss_info = computation_info::multistage_{{ multistage.id }};
-
-    ptrs.check();
 
     gt::uint_t const nx = grid.i_high_bound() - grid.i_low_bound() + 1;
     gt::uint_t const ny = grid.j_high_bound() - grid.j_low_bound() + 1;
@@ -29,10 +36,21 @@ void run(ptrs const& ptrs, Grid const& grid) {
     dim3 blocks{num_blocks_i, num_blocks_j, num_blocks_k};
 
 #ifdef __CUDACC__
-    launch_kernel<<<blocks, threads>>>(ptrs, grid);
+    launch_kernel<<<blocks, threads>>>
 #else
-    launch_kernel(ptrs, grid);
+    launch_kernel
 #endif
+        (
+        {%- for kind_id, kind_info in multistage.kinds|dictsort %}
+          kind_{{ kind_id }}_fields,
+        {%- endfor -%}
+        {%- for arg_id, arg_info in multistage.temporaries.args|dictsort %}
+          {%- if not arg_info.local %}
+            kind_{{ arg_id }}_fields,
+          {%- endif %}
+        {%- endfor -%}
+        grid);
+
 #ifndef NDEBUG
     if (cudaDeviceSynchronize() != cudaSuccess)
         throw std::runtime_error("error in multistage 1");

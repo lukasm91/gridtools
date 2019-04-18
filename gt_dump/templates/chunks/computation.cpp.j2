@@ -151,17 +151,16 @@ void generated_computation<Grid>::run(
             {%- endfor %}
           {%- endfor %}
 
-          mss_{{ multistage.id }}::ptrs ptrs{
-              {%- set comma = joiner(", ") %}
+          mss_{{ multistage.id }}::run(
               {%- for kind_id, kind_info in multistage.kinds|dictsort %}
-                {{- comma() }}kind_{{ kind_id }}_fields
+                kind_{{ kind_id }}_fields,
               {%- endfor -%}
               {%- for arg_id, arg_info in multistage.temporaries.args|dictsort %}
                 {%- if not arg_info.local %}
-                  {{- comma() }}kind_tmp_{{ arg_id }}_fields
+                  kind_tmp_{{ arg_id }}_fields,
                 {%- endif %}
-              {%- endfor -%}};
-          mss_{{ multistage.id }}::run(ptrs, grid_);
+              {%- endfor -%}
+              grid_);
 
       }
     {%- endfor %}

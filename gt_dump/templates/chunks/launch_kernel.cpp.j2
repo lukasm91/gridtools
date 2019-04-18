@@ -1,5 +1,27 @@
 template <typename Grid>
-__global__ void launch_kernel(ptrs ptrs, Grid grid) {
+__global__ void launch_kernel(
+        {%- for kind_id, kind_info in multistage.kinds|dictsort %}
+          kind_{{ kind_id }}_fields const kind_{{ kind_id }}_fields,
+        {%- endfor -%}
+        {%- for arg_id, arg_info in multistage.temporaries.args|dictsort %}
+          {%- if not arg_info.local %}
+            kind_tmp_{{ arg_id }}_fields const kind_{{ arg_id }}_fields,
+          {%- endif %}
+        {%- endfor -%}
+        Grid grid) {
+
+    ptrs ptrs{
+        {%- set comma = joiner(", ") %}
+        {%- for kind_id, kind_info in multistage.kinds|dictsort %}
+          {{ comma() }} kind_{{ kind_id }}_fields
+        {%- endfor -%}
+        {%- for arg_id, arg_info in multistage.temporaries.args|dictsort %}
+          {%- if not arg_info.local %}
+            {{ comma() }} kind_{{ arg_id }}_fields
+          {%- endif %}
+        {%- endfor -%}
+    };
+    ptrs.check();
 
     static constexpr int OffsetLimit = {{ context.offset_limit }};
 

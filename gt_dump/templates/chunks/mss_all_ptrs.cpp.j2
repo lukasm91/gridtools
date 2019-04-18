@@ -3,7 +3,7 @@ struct all_ptrs {
     // forward all but ij caches
     template <uint_t Id, bool Temporary>
     GT_FUNCTION_DEVICE double resolve(helpers::arg_identifier<Id, Temporary>, gt::array<int, 3> const &offsets) const {
-        return ptrs_.resolve(helpers::arg_identifier<Id, Temporary>{}, offsets);
+        return ptrs_.resolve_const(helpers::arg_identifier<Id, Temporary>{}, offsets);
     }
     template <uint_t Id, bool Temporary>
     GT_FUNCTION_DEVICE double& resolve(helpers::arg_identifier<Id, Temporary>, gt::array<int, 3> const &offsets) {
@@ -26,7 +26,7 @@ struct all_ptrs {
       {%- endif %}
     {%- endfor %}
 
-    ptrs& ptrs_;
+    ptrs const& ptrs_;
     {%- if multistage.ij_caches|length > 0 %}
       ij_caches &ij_caches_;
     {%- endif %}
