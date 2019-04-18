@@ -1,7 +1,7 @@
 {%- for multistage in context.multistages %}
   template <typename Grid>
   void run_multistage_{{ multistage.id }}(multistage_{{ multistage.id }}_ptrs const& ptrs, Grid const& grid) {
-      using mss_info = multistage_{{ multistage.id }}_info;
+      using mss_info = computation_info::multistage_{{ multistage.id }};
 
       ptrs.check();
 

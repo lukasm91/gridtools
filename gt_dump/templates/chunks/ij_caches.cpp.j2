@@ -1,7 +1,7 @@
 {%- for multistage in context.multistages %}
   {%- if multistage.ij_caches|length > 0 %}
     struct multistage_{{ multistage.id }}_ij_caches {
-        using mss_info = multistage_{{ multistage.id }}_info;
+        using mss_info = computation_info::multistage_{{ multistage.id }};
         static constexpr int ij_cache_i_size =
             computation_info::block_i_size + -mss_info::max_stage_extent::iminus() + mss_info::max_stage_extent::iplus();
         static constexpr int ij_cache_j_size =
