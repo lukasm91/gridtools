@@ -118,6 +118,60 @@ def iterate_multistage(mss, *, enumerated=False):
                 yield stage_ref
 
 
+class Synchronizer:
+    def __init__(self, mss):
+        self.current_interval = None
+
+        self.ij_caches = set(
+            [(ij_cache.id, ij_cache.temporary) for ij_cache in mss.ij_caches]
+        )
+
+    def sync_required(self, interval, accessors, args):
+        if self.current_interval != interval:
+            self.sync_on_read = set()
+            self.sync_on_write = set(self.ij_caches)
+            self.current_interval = interval
+
+        result = False
+
+        for acc, arg in zip(accessors, args):
+            list_id = (arg.id, arg.arg_type)
+            if (
+                list_id in self.sync_on_write
+                and acc.intent == interface_pb2.Accessor.READ_WRITE
+            ):
+                result = True
+                break
+
+            elif list_id in self.sync_on_read and (
+                acc.extent.iminus != 0
+                or acc.extent.iplus != 0
+                or acc.extent.jminus != 0
+                or acc.extent.jplus != 0
+            ):
+                result = True
+                break
+
+        if result:
+            self.sync_on_read = set()
+            self.sync_on_write = set()
+
+        for acc, arg in zip(accessors, args):
+            list_id = (arg.id, arg.arg_type == interface_pb2.Multistage.TEMPORARY)
+            if acc.intent == interface_pb2.Accessor.READ_WRITE:
+                self.sync_on_read.add(list_id)
+
+            if (
+                acc.extent.iminus != 0
+                or acc.extent.iplus != 0
+                or acc.extent.jminus != 0
+                or acc.extent.jplus != 0
+            ):
+                self.sync_on_write.add(list_id)
+
+        return result
+
+
 class Generator:
     def __init__(self, in_file):
         self.computation = interface_pb2.Computation()
@@ -189,8 +243,7 @@ class Generator:
     def _make_argmap_name(id_d, id_i, stage_name):
         return "arg_map_{}_{}_{}".format(id_d, id_i, to_identifier(stage_name))
 
-    @staticmethod
-    def _make_intervals(mss_id, mss, stage_info):
+    def _make_intervals(self, mss_id, mss, stage_info):
         intervals = [
             message_to_interval(interval.interval)
             for stage_ref in iterate_multistage(mss)
@@ -204,6 +257,8 @@ class Generator:
             )
         )
 
+        synchronizer = Synchronizer(mss)
+
         return [
             {
                 "interval": (begin, end + (0, -1)),
@@ -215,17 +270,21 @@ class Generator:
                             id_d, id_i, Generator._restore_stage_name(stage_ref.name)
                         ),
                         "overload": (
-                            message_to_interval(i.interval)
-                            if i.overload == interface_pb2.StageInterval.INTERVAL
+                            message_to_interval(interval.interval)
+                            if interval.overload == interface_pb2.StageInterval.INTERVAL
                             else "none"
                         ),
-                        "sync_required": id_d > 0 and id_i == 0,
+                        "sync_required": synchronizer.sync_required(
+                            (begin, end),
+                            self.computation.stages[stage_ref.name].accessors,
+                            stage_ref.args,
+                        ),
                     }
                     for (id_d, id_i), stage_ref in iterate_multistage(
                         mss, enumerated=True
                     )
-                    for i in stage_info[stage_ref.name].intervals
-                    if message_to_interval(i.interval).contains(begin)
+                    for interval in stage_info[stage_ref.name].intervals
+                    if message_to_interval(interval.interval).contains(begin)
                 ],
             }
             for begin, end in zip(levels[:-1], levels[1:])
@@ -504,7 +563,7 @@ class Generator:
         self._patch_context_with_caches(context)
         self._patch_computation(context)
 
-        pprint(context)
+        #  pprint(context["multistages"])
 
         env = jinja2.Environment(
             loader=jinja2.FileSystemLoader(
@@ -563,6 +622,7 @@ class Generator:
         )
 
         template = env.get_template("generator.cpp.j2")
+        #  return
 
         with open(out_file, "w") as out_f:
             print(template.render(context=context), end="", file=out_f)

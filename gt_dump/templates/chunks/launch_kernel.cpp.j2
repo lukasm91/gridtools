@@ -136,10 +136,6 @@ __global__ void launch_kernel(
                     k_caches.flush(ptrs);
               {%- endif %}
 
-              {%- if multistage.ij_caches and multistage|has_ij_caches %}
-                __syncthreads(); // needed because we have an ij cache
-              {%- endif %}
-
               ptrs.increment_k({{ '1' if multistage.direction != "backward" else '-1' }});
           }
       }
