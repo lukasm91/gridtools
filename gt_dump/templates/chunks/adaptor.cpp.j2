@@ -81,8 +81,8 @@ namespace gridtools {
             computation_.run(
                 {%- set comma = joiner(", ") -%}
                 {%- for kind_id, kind_info in context.kinds|dictsort %}
-                  {{ comma() }} get_stride<{{ kind_info.args|first }}>(ptrs_, srcs...)
-                  {{ comma() }} get_dim<{{ kind_info.args|first }}>(ptrs_, srcs...)
+                  {{ comma() }} get_stride<{{ kind_info.args|sort|first }}>(ptrs_, srcs...)
+                  {{ comma() }} get_dim<{{ kind_info.args|sort|first }}>(ptrs_, srcs...)
                 {%- endfor %}
                 {%- for arg_id, arg_info in context.args|dictsort() %}
                   {{- comma() }} get_arg<{{ arg_id }}>(srcs...)

@@ -106,31 +106,29 @@ __global__ void launch_kernel(
                 k_caches.fill(thread_in_domain, ptrs);
               {%- endif %}
 
-              {% for independent_stage_list in interval.stages %}
-                {%- if independent_stage_list|length > 0 and not loop.first %}
+              {% for interval_stage in interval.stages %}
+                {%- if interval_stage.sync_required %}
                   __syncthreads();
                 {%- endif %}
-                {%- for interval_stage in independent_stage_list %}
-                  using stage_{{ interval_stage.id }}_extent =
-                      mss_info::stage_{{ interval_stage.id }}_{{ interval_stage.name|to_identifier }}::stage_extent;
-                  if (helpers::in_domain<stage_{{ interval_stage.id }}_extent>(iblock, jblock, current_block_i_size, current_block_j_size)) {
+                using stage_{{ interval_stage.id }}_extent =
+                    mss_info::stage_{{ interval_stage.id }}_{{ interval_stage.name|to_identifier }}::stage_extent;
+                if (helpers::in_domain<stage_{{ interval_stage.id }}_extent>(iblock, jblock, current_block_i_size, current_block_j_size)) {
 
-                      all_ptrs merged_ptrs{ptrs,
-                          {{ 'ij_caches, ' if multistage|has_ij_caches }}
-                          {{ 'k_caches, ' if multistage|has_k_caches }}
-                          iblock,
-                          jblock};
-                      auto eval = helpers::eval<all_ptrs,
-                          {{ interval_stage.argmap_name }}>{merged_ptrs};
-                      {{ interval_stage.name }}::apply(eval
-                          {%- if interval_stage.overload != "none" -%}
-                              , gt::interval<
-                                  gt::level<{{ interval_stage.overload[0][0] }}, {{ interval_stage.overload[0][1] }}, OffsetLimit>,
-                                  gt::level<{{ interval_stage.overload[1][0] }}, {{ interval_stage.overload[1][1] }}, OffsetLimit>
-                              >{}
-                          {%- endif %});
-                  }
-                {%- endfor %}
+                    all_ptrs merged_ptrs{ptrs,
+                        {{ 'ij_caches, ' if multistage|has_ij_caches }}
+                        {{ 'k_caches, ' if multistage|has_k_caches }}
+                        iblock,
+                        jblock};
+                    auto eval = helpers::eval<all_ptrs,
+                        {{ interval_stage.argmap_name }}>{merged_ptrs};
+                    {{ interval_stage.name }}::apply(eval
+                        {%- if interval_stage.overload != "none" -%}
+                            , gt::interval<
+                                gt::level<{{ interval_stage.overload[0][0] }}, {{ interval_stage.overload[0][1] }}, OffsetLimit>,
+                                gt::level<{{ interval_stage.overload[1][0] }}, {{ interval_stage.overload[1][1] }}, OffsetLimit>
+                            >{}
+                        {%- endif %});
+                }
               {%- endfor %}
 
               {% if multistage|has_k_caches %}

@@ -109,6 +109,15 @@ def add_extent(extent1, extent2):
     return tuple(map(operator.add, extent1, extent2))
 
 
+def iterate_multistage(mss, *, enumerated=False):
+    for id_d, ds in enumerate(mss.dependent_stages):
+        for id_i, stage_ref in enumerate(ds.independent_stages):
+            if enumerated:
+                yield (id_d, id_i), stage_ref
+            else:
+                yield stage_ref
+
+
 class Generator:
     def __init__(self, in_file):
         self.computation = interface_pb2.Computation()
@@ -129,8 +138,6 @@ class Generator:
         for mss in reversed(self.computation.multistages):
             mss_data = []
             for ds in reversed(mss.dependent_stages):
-                ds_data = []
-                new_arg_extents = dict()
                 for stage_ref in ds.independent_stages:
                     stage = self.computation.stages[stage_ref.name]
                     stage_extent = (0, 0, 0, 0)
@@ -144,7 +151,7 @@ class Generator:
                             )
 
                             stage_extent = max_extent(stage_extent, arg_extent)
-                    ds_data.append(stage_extent)
+                    mss_data.append(stage_extent)
 
                     for arg, accessor in zip(stage_ref.args, stage.accessors):
                         stage_arg_extent = add_extent(
@@ -157,18 +164,14 @@ class Generator:
                             ),
                         )
 
-                        new_arg_extents[(arg.id, arg.arg_type)] = (
+                        arg_extents[(arg.id, arg.arg_type)] = (
                             max_extent(
-                                stage_arg_extent,
-                                new_arg_extents[(arg.id, arg.arg_type)],
+                                stage_arg_extent, arg_extents[(arg.id, arg.arg_type)]
                             )
-                            if (arg.id, arg.arg_type) in new_arg_extents
+                            if (arg.id, arg.arg_type) in arg_extents
                             else stage_arg_extent
                         )
 
-                arg_extents = merge_dicts(max_extent, new_arg_extents, arg_extents)
-
-                mss_data.append(ds_data)
             stage_analysis_data.append(list(reversed(mss_data)))
         stage_analysis_data = list(reversed(stage_analysis_data))
 
@@ -184,17 +187,14 @@ class Generator:
 
     @staticmethod
     def _make_argmap_name(id_d, id_i, stage_name):
-        return "arg_map_{}_{}_{}".format(
-            id_d, id_i, to_identifier(stage_name)
-        )
+        return "arg_map_{}_{}_{}".format(id_d, id_i, to_identifier(stage_name))
 
     @staticmethod
     def _make_intervals(mss_id, mss, stage_info):
         intervals = [
             message_to_interval(interval.interval)
-            for d in mss.dependent_stages
-            for stage in d.independent_stages
-            for interval in stage_info[stage.name].intervals
+            for stage_ref in iterate_multistage(mss)
+            for interval in stage_info[stage_ref.name].intervals
         ]
         levels = list(
             sorted(
@@ -208,24 +208,24 @@ class Generator:
             {
                 "interval": (begin, end + (0, -1)),
                 "stages": [
-                    [
-                        {
-                            "name": Generator._restore_stage_name(stage_ref.name),
-                            "id": Generator._make_stage_id(id_d, id_i),
-                            "argmap_name": Generator._make_argmap_name(
-                                id_d, id_i, Generator._restore_stage_name(stage_ref.name),
-                            ),
-                            "overload": (
-                                message_to_interval(i.interval)
-                                if i.overload == interface_pb2.StageInterval.INTERVAL
-                                else "none"
-                            ),
-                        }
-                        for id_i, stage_ref in enumerate(d.independent_stages)
-                        for i in stage_info[stage_ref.name].intervals
-                        if message_to_interval(i.interval).contains(begin)
-                    ]
-                    for id_d, d in enumerate(mss.dependent_stages)
+                    {
+                        "name": Generator._restore_stage_name(stage_ref.name),
+                        "id": Generator._make_stage_id(id_d, id_i),
+                        "argmap_name": Generator._make_argmap_name(
+                            id_d, id_i, Generator._restore_stage_name(stage_ref.name)
+                        ),
+                        "overload": (
+                            message_to_interval(i.interval)
+                            if i.overload == interface_pb2.StageInterval.INTERVAL
+                            else "none"
+                        ),
+                        "sync_required": id_d > 0 and id_i == 0,
+                    }
+                    for (id_d, id_i), stage_ref in iterate_multistage(
+                        mss, enumerated=True
+                    )
+                    for i in stage_info[stage_ref.name].intervals
+                    if message_to_interval(i.interval).contains(begin)
                 ],
             }
             for begin, end in zip(levels[:-1], levels[1:])
@@ -243,8 +243,7 @@ class Generator:
             dict.fromkeys(
                 [
                     self.computation.fields.args[arg_ref.id].kind
-                    for d in mss.dependent_stages
-                    for stage_ref in d.independent_stages
+                    for stage_ref in iterate_multistage(mss)
                     for arg_ref in stage_ref.args
                     if arg_ref.arg_type != interface_pb2.Multistage.TEMPORARY
                 ]
@@ -259,8 +258,7 @@ class Generator:
                 arg_ref.arg_type == interface_pb2.Multistage.TEMPORARY,
                 accessor.intent == interface_pb2.Accessor.READ_ONLY,
             )
-            for d in mss.dependent_stages
-            for stage_ref in d.independent_stages
+            for stage_ref in iterate_multistage(mss)
             for arg_ref, accessor in zip(
                 stage_ref.args, self.computation.stages[stage_ref.name].accessors
             )
@@ -328,11 +326,7 @@ class Generator:
         mss_data = {
             "id": mss_id,
             "intervals": self._make_intervals(mss_id, mss, self.computation.stages),
-            "max_stage_extent": reduce(
-                lambda l, r: max_extent(l, reduce(max_extent, r)),
-                mss_stage_analysis,
-                (0, 0, 0, 0),
-            ),
+            "max_stage_extent": reduce(max_extent, mss_stage_analysis, (0, 0, 0, 0)),
             "direction": (
                 "forward"
                 if mss.policy == interface_pb2.Multistage.FORWARD
@@ -342,33 +336,30 @@ class Generator:
                     else "parallel"
                 )
             ),
-            "blocksize": 20 if mss.policy == interface_pb2.Multistage.PARALLEL else None,
+            "blocksize": 20
+            if mss.policy == interface_pb2.Multistage.PARALLEL
+            else None,
             "stages": [
-                [
-                    {
-                        "stage_extent": stage_extent,
-                        "name": stage_ref.name.replace("(anonymous namespace)::", ""),
-                        "id": Generator._make_stage_id(id_d, id_i),
-                        "argmap_name": Generator._make_argmap_name(
-                            id_d, id_i, Generator._restore_stage_name(stage_ref.name)
-                        ),
-                        "argmap": [
-                            {
-                                "accessor": accessor.id,
-                                "arg": {"type": Generator._arg_type(arg), "id": arg.id},
-                            }
-                            for arg, accessor in zip(
-                                stage_ref.args,
-                                self.computation.stages[stage_ref.name].accessors,
-                            )
-                        ],
-                    }
-                    for id_i, (stage_ref, stage_extent) in enumerate(
-                        zip(d.independent_stages, d_stage_extents)
-                    )
-                ]
-                for id_d, (d, d_stage_extents) in enumerate(
-                    zip(mss.dependent_stages, mss_stage_analysis)
+                {
+                    "stage_extent": stage_extent,
+                    "name": stage_ref.name.replace("(anonymous namespace)::", ""),
+                    "id": Generator._make_stage_id(id_d, id_i),
+                    "argmap_name": Generator._make_argmap_name(
+                        id_d, id_i, Generator._restore_stage_name(stage_ref.name)
+                    ),
+                    "argmap": [
+                        {
+                            "accessor": accessor.id,
+                            "arg": {"type": Generator._arg_type(arg), "id": arg.id},
+                        }
+                        for arg, accessor in zip(
+                            stage_ref.args,
+                            self.computation.stages[stage_ref.name].accessors,
+                        )
+                    ],
+                }
+                for ((id_d, id_i), stage_ref), stage_extent in zip(
+                    iterate_multistage(mss, enumerated=True), mss_stage_analysis
                 )
             ],
             "temporaries": {
@@ -408,21 +399,20 @@ class Generator:
         }
 
         k_extents = {}
-        for d, d_stage_extents in zip(mss.dependent_stages, mss_stage_analysis):
-            for stage_ref, stage_extent in zip(d.independent_stages, d_stage_extents):
-                stage = self.computation.stages[stage_ref.name]
-                for arg, accessor in zip(stage_ref.args, stage.accessors):
-                    if not (arg.arg_type, arg.id) in k_extents:
-                        k_extents[(arg.arg_type, arg.id)] = (
-                            accessor.extent.kminus,
-                            accessor.extent.kplus,
-                        )
-                    else:
-                        old = k_extents[(arg.arg_type, arg.id)]
-                        k_extents[(arg.arg_type, arg.id)] = (
-                            min(old[0], accessor.extent.kminus),
-                            max(old[1], accessor.extent.kplus),
-                        )
+        for stage_ref, stage_extent in zip(iterate_multistage(mss), mss_stage_analysis):
+            stage = self.computation.stages[stage_ref.name]
+            for arg, accessor in zip(stage_ref.args, stage.accessors):
+                if not (arg.arg_type, arg.id) in k_extents:
+                    k_extents[(arg.arg_type, arg.id)] = (
+                        accessor.extent.kminus,
+                        accessor.extent.kplus,
+                    )
+                else:
+                    old = k_extents[(arg.arg_type, arg.id)]
+                    k_extents[(arg.arg_type, arg.id)] = (
+                        min(old[0], accessor.extent.kminus),
+                        max(old[1], accessor.extent.kplus),
+                    )
         mss_data["k_caches"] = [
             {
                 "id": k_cache.id,
@@ -451,11 +441,13 @@ class Generator:
         return mss_data
 
     def _patch_computation(self, context):
-        readwrite_args = [arg_id
+        readwrite_args = [
+            arg_id
             for mss in context["multistages"]
             for kind_id, kind_info in mss["kinds"].items()
             for arg_id, arg_info in kind_info["args"].items()
-            if not arg_info["readonly"]]
+            if not arg_info["readonly"]
+        ]
 
         for arg_id, arg_info in context["args"].items():
             arg_info["readonly"] = not arg_id in readwrite_args
@@ -463,7 +455,9 @@ class Generator:
     def generate(self, out_file):
         stage_analysis_data, arg_extents = self._stage_analysis()
 
-        max_stage_extent = reduce(max_extent, [s for mss in stage_analysis_data for ds in mss for s in ds])
+        max_stage_extent = reduce(
+            max_extent, [stage for mss in stage_analysis_data for stage in mss]
+        )
 
         context = {
             "hash": self.computation_id,
@@ -472,7 +466,9 @@ class Generator:
             "offset_limit": self.computation.offset_limit,
             "kinds": {
                 kind_id: {
-                    "layout": [-1, -1, -1] if list(kind_info.layout) == [-1] else list(kind_info.layout),
+                    "layout": [-1, -1, -1]
+                    if list(kind_info.layout) == [-1]
+                    else list(kind_info.layout),
                     "args": [
                         arg_id
                         for arg_id, arg_info in self.computation.fields.args.items()
@@ -551,12 +547,18 @@ class Generator:
                     "k_caches" in multistage.keys() and len(multistage["k_caches"]) > 0
                 ),
                 "has_ij_caches": lambda multistage: (
-                    "ij_caches" in multistage.keys() and len(multistage["ij_caches"]) > 0
+                    "ij_caches" in multistage.keys()
+                    and len(multistage["ij_caches"]) > 0
                 ),
                 "to_identifier": to_identifier,
                 "bool_to_str": lambda b: "true" if b else "false",
                 # TODO: Figure out why I need to multiply with 1...
-                "level_diff": lambda i: 1 * i[1][1] - 1 * i[0][1] - (1 if 1 * i[0][1] < 0 and 1 * i[1][1] > 0 else 0) + 1,
+                "level_diff": lambda i: (
+                    1 * i[1][1]
+                    - 1 * i[0][1]
+                    - (1 if 1 * i[0][1] < 0 and 1 * i[1][1] > 0 else 0)
+                    + 1
+                ),
             }
         )
 
@@ -567,36 +569,49 @@ class Generator:
 
         os.system("clang-format -i {}".format(out_file))
 
+
 in_file = os.path.abspath(sys.argv[1])
 out_file = os.path.abspath(sys.argv[2])
 
 if in_file.endswith("_expanded"):
     assert out_file.endswith("_expanded")
-    expanded_file = out_file[:-len("_expanded")]
+    expanded_file = out_file[: -len("_expanded")]
     print("<{}_expanded>".format(expanded_file))
 
     with open(expanded_file, "w") as out_f:
-        comp_name = in_file.split("__")[-1][:-len("_expanded")]
-        in_file_common = in_file[:-len("_expanded")]
+        comp_name = in_file.split("__")[-1][: -len("_expanded")]
+        in_file_common = in_file[: -len("_expanded")]
         comp_id = int(
-            hashlib.blake2b(in_file_common.encode("utf-8"), digest_size=7).hexdigest(), 16
+            hashlib.blake2b(in_file_common.encode("utf-8"), digest_size=7).hexdigest(),
+            16,
         )
         print(comp_name + "_remainder")
         comp_remainder_id = int(
-            hashlib.blake2b((in_file_common + "_remainder").encode("utf-8"), digest_size=7).hexdigest(), 16
+            hashlib.blake2b(
+                (in_file_common + "_remainder").encode("utf-8"), digest_size=7
+            ).hexdigest(),
+            16,
         )
         comp_expandable_id = int(
-            hashlib.blake2b((in_file_common + "_expanded").encode("utf-8"), digest_size=7).hexdigest(), 16
+            hashlib.blake2b(
+                (in_file_common + "_expanded").encode("utf-8"), digest_size=7
+            ).hexdigest(),
+            16,
         )
 
         print("#define GT_DUMP_IDENTIFIER_{} {}".format(comp_name, comp_id), file=out_f)
         print("namespace gridtools {", file=out_f)
-        print("""
+        print(
+            """
             template <>
             struct expandable_computation_mapper<{}> {{
                 static constexpr long int expandable = {};
                 static constexpr long int remainder = {};
-            }};""".format(comp_id, comp_expandable_id, comp_remainder_id), file=out_f)
+            }};""".format(
+                comp_id, comp_expandable_id, comp_remainder_id
+            ),
+            file=out_f,
+        )
         print("}", file=out_f)
         print("#include <{}_expanded>".format(expanded_file), file=out_f)
         print("#include <{}_remainder>".format(expanded_file), file=out_f)
