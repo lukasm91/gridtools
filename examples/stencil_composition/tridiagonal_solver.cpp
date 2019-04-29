@@ -9,6 +9,8 @@
  */
 
 #include <gridtools/stencil_composition/stencil_composition.hpp>
+#include <gridtools/stencil_composition/stencil_functions.hpp>
+
 #include <iostream>
 
 /*
@@ -32,6 +34,22 @@ using backend_t = gt::backend::mc;
 using axis_t = gt::axis<2>;
 using full_t = axis_t::full_interval;
 
+struct some_function {
+    using out = gt::inout_accessor<0>;
+    using in = gt::in_accessor<1, gt::extent<-2, 0, 0, 0>>;
+
+    using param_list = gt::make_param_list<out, in>;
+
+    template <typename Evaluation>
+    GT_FUNCTION static void apply(Evaluation eval, axis_t::get_interval<1>) {
+        eval(out()) = eval(in(-2, 0, 0)) + eval(in(0, 0, 0));
+    }
+    template <typename Evaluation>
+    GT_FUNCTION static void apply(Evaluation eval, axis_t::get_interval<0>::modify<1, 0>) {
+        eval(out()) = 0.5 * eval(in(-2, 0, 0)) + eval(in(0, 0, 0));
+    }
+};
+
 struct fwd_stage_1 {
     using out = gt::inout_accessor<0>;
     using mask = gt::in_accessor<1>;
@@ -44,7 +62,7 @@ struct fwd_stage_1 {
         if (eval(mask()))
             eval(out()) = 0.5 * (eval(in(1, 0, 0)) + eval(in(-1, 0, 0)));
         else
-            eval(out()) = eval(in(0, 0, 0));
+            eval(out()) = gt::call<some_function, axis_t::get_interval<1>>::at<1, 0, 0>::with(eval, in());
     }
 
     template <typename Evaluation>
@@ -52,7 +70,8 @@ struct fwd_stage_1 {
         if (eval(mask()))
             eval(out()) = 2 * 0.5 * (eval(in(1, 0, 0)) + eval(in(-1, 0, 0)));
         else
-            eval(out()) = 2 * eval(in(0, 0, 0));
+            // note that this is equivalent to the syntax on line 65
+            gt::call_proc<some_function, axis_t::get_interval<0>::modify<1, 0>>::at<1, 0, 0>::with(eval, out(), in());
     }
 
     template <typename Evaluation>
